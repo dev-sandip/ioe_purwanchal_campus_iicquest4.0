@@ -1,5 +1,5 @@
 {
-  "id": "0637d4f9-6284-41d4-a26d-ae7b563d37e2",
+  "id": "2741fa97-3a65-482a-ade5-be2a33068281",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -290,6 +290,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'free'"
+        },
+        "paid": {
+          "name": "paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "banned": {
           "name": "banned",

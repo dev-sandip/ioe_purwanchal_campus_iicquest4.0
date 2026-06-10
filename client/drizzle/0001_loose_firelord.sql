@@ -1,1 +1,0 @@
-ALTER TABLE "user" ADD COLUMN "paid" boolean DEFAULT false NOT NULL;
