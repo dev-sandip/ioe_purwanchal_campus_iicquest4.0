@@ -45,6 +45,7 @@
     "short_name": "Pragya Lekh",
     "version": "1.0.0",
     "description": "Pragya Lekh Browser Extension",
+    "key":"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArXx3+eU7NfWiaZUnDNSHVyyfCZAYh1YmakyhLv9TV+Etm6LXUcHure8ZiGhq9xsB7u0qtKNhJYFpD0YLjVYrmFmR7X2Qd7dwX+Y0APk1sYuQxFO5lcvQJK+VVnqu6cgY4qiOlp+nXRfciWokaWKlQjdwP13+xSNfRIpZKWLAO8GsJGiz36PfHCpdzhFm4JvWp5rYIV0Yza2uUKsmr3fdWOlO0HbRtVGLLHKbpQ1noFyl4jA8Sm02/TaFTBeDxDDHUDdfV0YPWKMZbfFDzHE09jX0NnX9hjTkLYpW6CIXKBjGsjhmt3mOVlc+GXb0/ppW3DGozJVRWrygPJhx1a+WOQIDAQAB",
     "permissions": [
       "storage",
       "tabs",
