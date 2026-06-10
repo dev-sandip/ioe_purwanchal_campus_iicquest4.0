@@ -12,9 +12,9 @@ export type AuthSession = {
   tokenType: "Bearer"
   user?: AuthUser
 }
-
-const DEFAULT_AUTH_ME_URL = "http://localhost:3000/api/extension/me"
-const DEFAULT_LOGIN_URL = "http://localhost:3000/login"
+const BASE_URL= "https://ioe-purwanchal-campus-iicquest4-0.vercel.app"
+const DEFAULT_AUTH_ME_URL = `${BASE_URL}/api/extension/me`
+const DEFAULT_LOGIN_URL = `${BASE_URL}/login`
 
 const getLoginUrl = () =>
   process.env.PLASMO_PUBLIC_AUTH_LOGIN_URL || DEFAULT_LOGIN_URL
@@ -34,7 +34,7 @@ export const getExtensionCallbackUrl = () =>
   chrome.runtime.getURL("tabs/auth-callback.html")
 
 const DEFAULT_EXCHANGE_URL =
-  "http://localhost:3000/api/auth/extension/exchange"
+  "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/api/auth/extension/exchange"
 
 const getExchangeUrl = () =>
   process.env.PLASMO_PUBLIC_AUTH_EXCHANGE_URL || DEFAULT_EXCHANGE_URL
