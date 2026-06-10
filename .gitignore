@@ -1,0 +1,74 @@
+
+# Python basics
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+
+# Jupyter Notebook
+
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+
+*ml/data_cleaned
+
+# Data files (IMPORTANT)
+
+data/
+*.csv
+*.xlsx
+*.parquet
+
+# BUT keep structure (optional)
+!data/.gitkeep
+
+
+# Model artifacts
+
+model/
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.onnx
+
+
+# Logs
+
+logs/
+*.log
+
+
+# IDEs
+
+.vscode/
+.idea/
+*.swp
+
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+
+# ML specific (optional but recommended)
+
+wandb/
+mlruns/
+runs/
+__pycache__/
+
+
+# Environment files
+
+.env
+*.env
