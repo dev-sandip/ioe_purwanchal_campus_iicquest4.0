@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Pragya Lekh",
+  "short_name": "Pragya Lekh",
+  "version": "1.0.0",
+  "description": "Pragya Lekh Browser Extension",
+
+  "permissions": ["storage", "tabs"],
+
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://your-domain.com/*"
+  ],
+
+  "action": {
+    "default_title": "Pragya Lekh",
+    "default_popup": "popup.html"
+  },
+
+  "icons": {
+    "16": "assets/icon16.png",
+    "32": "assets/icon32.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["tabs/auth-callback.html"],
+      "matches": ["http://localhost:3000/*", "https://your-domain.com/*"]
+    }
+  ]
+}
