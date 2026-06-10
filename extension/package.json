@@ -1,8 +1,8 @@
 {
   "name": "pragya-lekh",
-  "displayName": "Pragya lekh",
-  "version": "0.0.1",
-  "description": "An Extension For Nepali Language Correction",
+  "displayName": "Pragya Lekh",
+  "version": "1.0.0",
+  "description": "Pragya Lekh Browser Extension",
   "author": "Sandip Sapkota <contact@thesandip.dev>",
   "scripts": {
     "dev": "pnpm dev:chrome",
@@ -38,12 +38,31 @@
     "typescript": "5.3.3"
   },
   "manifest": {
+    "manifest_version": 3,
+    "name": "Pragya Lekh",
+    "short_name": "Pragya Lekh",
+    "version": "1.0.0",
+    "description": "Pragya Lekh Browser Extension",
     "permissions": [
-      "storage"
+      "storage",
+      "tabs",
+      "identity"
     ],
     "host_permissions": [
-      "http://*/*",
-      "https://*/*"
+      "http://localhost:3000/*",
+      "https://your-domain.com/*"
+    ],
+    
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "tabs/auth-callback.html"
+        ],
+        "matches": [
+          "http://localhost:3000/*",
+          "https://your-domain.com/*"
+        ]
+      }
     ]
   }
 }

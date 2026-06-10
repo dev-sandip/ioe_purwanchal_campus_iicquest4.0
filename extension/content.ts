@@ -7,4 +7,4 @@ export const config: PlasmoCSConfig = {
   all_frames: true
 }
 
-startContentScript()
+// startContentScript()
