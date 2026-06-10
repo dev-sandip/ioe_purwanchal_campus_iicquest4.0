@@ -7,4 +7,9 @@ export const config: PlasmoCSConfig = {
   all_frames: true
 }
 
-// startContentScript()
+const STARTED_KEY = "__pragya_lekh_content_script_started__"
+
+if (!(window as any)[STARTED_KEY]) {
+  ;(window as any)[STARTED_KEY] = true
+  startContentScript()
+}
