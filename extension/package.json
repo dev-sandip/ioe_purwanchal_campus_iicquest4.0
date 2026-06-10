@@ -1,0 +1,43 @@
+{
+  "name": "pragya-lekh",
+  "displayName": "Pragya lekh",
+  "version": "0.0.1",
+  "description": "An Extension For Nepali Language Correction",
+  "author": "Sandip Sapkota <contact@thesandip.dev>",
+  "scripts": {
+    "dev": "pnpm dev:chrome",
+    "dev:chrome": "cross-env PLASMO_PUBLIC_BROWSER_NAME='chrome' plasmo dev --target=chrome-mv3",
+    "dev:firefox": "cross-env PLASMO_PUBLIC_BROWSER_NAME='firefox' plasmo dev --target=firefox-mv3",
+    "build": "pnpm build:chrome",
+    "build:chrome": "cross-env PLASMO_PUBLIC_BROWSER_NAME='chrome' plasmo build --target=chrome-mv3",
+    "build:firefox": "cross-env PLASMO_PUBLIC_BROWSER_NAME='firefox' plasmo build --target=firefox-mv3",
+    "package": "plasmo package",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "plasmo": "0.90.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "4.1.1",
+    "@types/chrome": "0.0.258",
+    "@types/node": "20.11.5",
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
+    "cross-env": "^10.1.0",
+    "prettier": "3.2.4",
+    "typescript": "5.3.3"
+  },
+  "manifest": {
+    "permissions": [
+      "storage"
+    ],
+    "host_permissions": [
+      "http://*/*",
+      "https://*/*"
+    ]
+  }
+}
