@@ -50,19 +50,18 @@
     ],
     "host_permissions": [
       "http://localhost:3000/*",
-      "https://your-domain.com/*"
+      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/*",
+      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/api/extension/me",
+      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/login"
     ],
-    
-    "web_accessible_resources": [
-      {
-        "resources": [
-          "tabs/auth-callback.html"
-        ],
-        "matches": [
-          "http://localhost:3000/*",
-          "https://your-domain.com/*"
-        ]
-      }
+   "web_accessible_resources": [
+  {
+    "resources": ["tabs/auth-callback.html"],
+    "matches": [
+      "http://localhost:3000/*",
+      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/*"
     ]
+  }
+]
   }
 }
