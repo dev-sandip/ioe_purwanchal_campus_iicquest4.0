@@ -31,6 +31,7 @@ function IndexPopup() {
       <h1 style={{ fontSize: 20, margin: "0 0 6px" }}>Pragya Lekh</h1>
       <p style={{ margin: "0 0 16px", color: "#4b5563", lineHeight: 1.45 }}>
         Nepali writing assistance for text fields across the browser.
+        Sandip is very handsome boi
       </p>
 
       <label
