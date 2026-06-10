@@ -1,6 +1,5 @@
 import { Button } from '#/components/ui/button'
 import { authClient } from '#/lib/auth-client'
-import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   
@@ -9,7 +8,8 @@ import {
   Mail,
   User,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type LoginSearch = {
   source?: 'extension'
@@ -34,10 +34,9 @@ function Login() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const isExtensionLogin = search.source === 'extension'
-  const destination = isExtensionLogin
-    ? '/api/extension/auth-callback'
-    : '/dashboard'
+const isExtensionLogin = search.source === 'extension'
+const navigate = useNavigate()
+const hasRedirected = useRef(false)
 
   const title = useMemo(
     () => (mode === 'signin' ? 'Log in to console' : 'Create console access'),
@@ -61,22 +60,28 @@ function Login() {
       return
     }
 
-    window.location.href = destination
+ hasRedirected.current = true
+
+if (isExtensionLogin) {
+  window.location.assign('/api/extension/auth-callback')
+  return
+}
+
+void navigate({ to: '/dashboard' })
+
+  }
+useEffect(() => {
+  if (isPending || !session?.user || hasRedirected.current) return
+
+  hasRedirected.current = true
+
+  if (isExtensionLogin) {
+    window.location.assign('/api/extension/auth-callback')
+    return
   }
 
-  useEffect(() => {
-    if (!isPending && session?.user) {
-      window.location.href = destination
-    }
-  }, [destination, isPending, session?.user])
-
-  if (isPending || session?.user) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-[#f7f8f3] text-[#17211c]">
-        <Loader2 className="size-6 animate-spin text-[#1f7159]" />
-      </main>
-    )
-  }
+  void navigate({ to: '/dashboard' })
+}, [isExtensionLogin, isPending, navigate, session?.user])
 
   return (
     <main className="grid min-h-screen bg-[#f7f8f3] text-[#17211c] lg:grid-cols-[0.92fr_1.08fr]">

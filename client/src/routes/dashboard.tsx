@@ -1,6 +1,6 @@
 import { Button, buttonVariants } from '#/components/ui/button'
 import { authClient } from '#/lib/auth-client'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link,Navigate } from '@tanstack/react-router'
 import {
   Activity,
   ArrowLeft,
@@ -85,8 +85,10 @@ function Dashboard() {
         return
       }
 
-      setUsers((result.data?.users ?? []) as AdminUser[])
-      setTotalUsers(result.data?.total ?? 0)
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      setUsers((result.data.users ?? []) as AdminUser[])
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      setTotalUsers(result.data.total ?? 0)
     }
 
     void loadUsers()
@@ -138,24 +140,9 @@ function Dashboard() {
     )
   }
 
-  if (!user) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-[#f7f8f3] px-5 text-center text-[#17211c]">
-        <div>
-          <h1 className="text-3xl font-semibold">Login required</h1>
-          <p className="mt-3 text-[#526159]">
-            Authenticate before opening Pragya Lekh.
-          </p>
-          <Link
-            to="/login"
-            className={buttonVariants({ className: 'mt-6 rounded-md' })}
-          >
-            Login
-          </Link>
-        </div>
-      </main>
-    )
-  }
+if (!user) {
+  return <Navigate to="/login" />
+}
 
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#17211c]">
@@ -405,7 +392,7 @@ function AdminUsersPanel({
             {isLoading ? (
               <tr>
                 <td className="px-5 py-6 text-[#526159]" colSpan={8}>
-                  Loading users...
+                 No Users Found
                 </td>
               </tr>
             ) : null}
