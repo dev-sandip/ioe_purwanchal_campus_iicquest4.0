@@ -8,8 +8,7 @@ import {
   User
 } from "lucide-react"
 import { useEffect, useState } from "react"
-
-import "./style.css"
+import { sendToFlowerServer } from "~src/lib/flower"
 
 import { Badge } from "~components/ui/badge"
 import { Button } from "~components/ui/button"
@@ -33,8 +32,11 @@ function IndexPopup() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null)
   const [authError, setAuthError] = useState("")
   const [isAuthenticating, setIsAuthenticating] = useState(false)
-
-  useEffect(() => {
+  // sujal
+const [syncMessage, setSyncMessage] = useState("")
+const [isSyncing, setIsSyncing] = useState(false)
+  //sujal ko part end 
+useEffect(() => {
     void getSettings().then(setSettings)
     void refreshAuthSession()
       .then(setAuthSession)
@@ -76,6 +78,27 @@ function IndexPopup() {
     await clearAuthSession()
     setAuthSession(null)
   }
+
+// sujal ko part 
+const handleSyncToFlower = async () => {
+  setIsSyncing(true)
+  setSyncMessage("")
+
+  try {
+    const result = await sendToFlowerServer()
+    setSyncMessage(result.message)
+  } catch (error) {
+    setSyncMessage("Failed to send local data.")
+  } finally {
+    setIsSyncing(false)
+  }
+}
+
+
+
+// end here
+
+
 
   return (
     <div className="w-72 bg-background p-3 text-foreground">
@@ -172,6 +195,69 @@ function IndexPopup() {
           ) : null}
         </CardContent>
       </Card>
+{/* sujal ko part hai onnx  a big space here*/}
+
+
+
+
+
+
+
+
+
+
+<Card className="mt-3">
+  <CardHeader className="p-4 pb-2">
+    <CardTitle className="flex items-center gap-2">
+      <ShieldCheck className="h-4 w-4 text-primary" />
+      Federated Sync
+    </CardTitle>
+  </CardHeader>
+
+  <CardContent className="grid gap-3 p-4 pt-0">
+    <Button
+      disabled={isSyncing}
+      onClick={handleSyncToFlower}
+      type="button"
+      variant="secondary">
+      {isSyncing ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <ShieldCheck className="h-4 w-4" />
+      )}
+
+      Send Local Data
+    </Button>
+
+    {syncMessage ? (
+      <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+        {syncMessage}
+      </div>
+    ) : null}
+  </CardContent>
+</Card>
+
+
+
+
+
+{/* end here also a big spave hai */}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
   )
 }

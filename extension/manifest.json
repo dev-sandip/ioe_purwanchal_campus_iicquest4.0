@@ -26,7 +26,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["tabs/auth-callback.html"],
+      "resources": ["tabs/auth-callback.html", "model/*"],
       "matches": ["http://localhost:3000/*", "https://your-domain.com/*"]
     }
   ]
