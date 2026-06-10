@@ -1,1 +1,0 @@
-# IOE Purwamchal Campus
