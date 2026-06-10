@@ -28,6 +28,9 @@ data/
 # BUT keep structure (optional)
 !data/.gitkeep
 
+
+# Model artifacts
+
 # =====================
 # Model artifacts
 # =====================
@@ -37,6 +40,15 @@ model/
 *.h5
 *.pt
 *.onnx
+
+
+# Logs
+
+logs/
+*.log
+
+
+# IDEs
 
 # =====================
 # Logs
@@ -50,6 +62,15 @@ logs/
 .vscode/
 .idea/
 *.swp
+
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+
+# ML specific (optional but recommended)
 
 # =====================
 # OS files
@@ -65,6 +86,11 @@ mlruns/
 runs/
 __pycache__/
 
+
+# Environment files
+
+.env
+*.env
 # =====================
 # Environment files
 # =====================
