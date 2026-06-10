@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "~components/ui/card"
 import { Switch } from "~components/ui/switch"
 import {
   clearAuthSession,
-  getAuthSession,
   loginWithWebsite,
+  refreshAuthSession,
   type AuthSession
 } from "~lib/auth"
 import {
@@ -36,7 +36,15 @@ function IndexPopup() {
 
   useEffect(() => {
     void getSettings().then(setSettings)
-    void getAuthSession().then(setAuthSession)
+    void refreshAuthSession()
+      .then(setAuthSession)
+      .catch((error) => {
+        setAuthError(
+          error instanceof Error
+            ? error.message
+            : "Unable to verify saved login."
+        )
+      })
   }, [])
 
   const updateSettings = (nextSettings: ExtensionSettings) => {
@@ -83,7 +91,11 @@ function IndexPopup() {
               Pragya Lekh
             </h1>
             {authSession ? (
-              <p className="text-xs text-muted-foreground">Signed in</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {authSession.user?.email ||
+                  authSession.user?.name ||
+                  "Signed in"}
+              </p>
             ) : null}
           </div>
         </div>
@@ -133,7 +145,7 @@ function IndexPopup() {
           {authSession ? (
             <>
               <div className="rounded-md bg-primary/10 px-3 py-2 text-xs text-primary">
-                Logged in. API calls will use your access token.
+                Logged in. API calls will use your verified access token.
               </div>
               <Button onClick={handleLogout} type="button" variant="secondary">
                 <LogOut className="h-4 w-4" />

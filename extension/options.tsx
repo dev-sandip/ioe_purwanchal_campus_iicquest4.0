@@ -176,8 +176,9 @@ function OptionsPage() {
               Extension callback URL
             </CardTitle>
             <CardDescription>
-              Configure the TanStack app to redirect successful login or signup
-              requests to this URL with a JWT token query parameter.
+              Configure the TanStack app to redirect successful login requests
+              to this URL with a JWT token query parameter. The extension
+              verifies that token with the configured auth me endpoint.
             </CardDescription>
           </CardHeader>
           <CardContent>

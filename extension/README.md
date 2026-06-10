@@ -53,6 +53,7 @@ the login URL with:
 
 ```bash
 PLASMO_PUBLIC_AUTH_LOGIN_URL=https://yourdomain.com/login
+PLASMO_PUBLIC_AUTH_ME_URL=https://yourdomain.com/api/extension/me
 ```
 
 The extension opens:
@@ -75,9 +76,10 @@ The callback page stores the JWT in `chrome.storage.local`. API calls can use
 Authorization: Bearer TOKEN
 ```
 
-For local development, set `DEV_AUTH_TOKEN` in `lib/auth.ts` to a JWT string.
-When this variable is set, clicking Login stores that token directly instead of
-opening the website login page.
+For local development, set `PLASMO_PUBLIC_DEV_AUTH_TOKEN` in `.env` to a JWT
+string. When this variable is set, clicking Login verifies that token with
+`PLASMO_PUBLIC_AUTH_ME_URL` and stores the returned user session directly
+instead of opening the website login page.
 
 ## Production Builds
 
