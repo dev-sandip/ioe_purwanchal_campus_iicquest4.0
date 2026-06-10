@@ -1,13 +1,17 @@
 export type ExtensionSettings = {
   enabled: boolean
   autoMarkEditableFields: boolean
+  showNextWordSuggestions: boolean
+  showCorrectionSuggestions: boolean
 }
 
 export const SETTINGS_STORAGE_KEY = "pragyaLekhSettings"
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   enabled: true,
-  autoMarkEditableFields: true
+  autoMarkEditableFields: true,
+  showNextWordSuggestions: true,
+  showCorrectionSuggestions: true
 }
 
 const hasStorage = () =>
