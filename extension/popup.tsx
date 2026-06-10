@@ -8,8 +8,11 @@ import {
   User
 } from "lucide-react"
 import { useEffect, useState } from "react"
+<<<<<<< Updated upstream
 
 import "./style.css"
+=======
+>>>>>>> Stashed changes
 
 import { Badge } from "~components/ui/badge"
 import { Button } from "~components/ui/button"
@@ -27,7 +30,9 @@ import {
   saveSettings,
   type ExtensionSettings
 } from "~lib/settings"
-
+import { sendToFlowerServer } from "./lib/flower"
+// Import For Style DO NOT REMOVE DESPITE APPEARING UNUSED AND WARING OTHERWISE CODE WILL BE FUCKED UP WITHOUT ANY STYLES
+import "./style.css"
 function IndexPopup() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS)
   const [authSession, setAuthSession] = useState<AuthSession | null>(null)
