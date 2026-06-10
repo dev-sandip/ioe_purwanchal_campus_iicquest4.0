@@ -9,8 +9,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import "./style.css"
-import { sendToFlowerServer } from "~src/lib/flower"
+
 
 import { Badge } from "~components/ui/badge"
 import { Button } from "~components/ui/button"

@@ -19,8 +19,7 @@ import {
 } from "./popover"
 import { predictLocally } from "./prediction"
 
-import { predictText } from "~src/lib/onnx"
-import { saveSample } from "~src/lib/storage"
+
 
 import type { EditableElement, Suggestion } from "./types"
 import { checkSentenceCorrection } from "./correction"
