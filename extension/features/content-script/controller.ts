@@ -18,6 +18,8 @@ import {
   renderSuggestions
 } from "./popover"
 import { predictLocally } from "./prediction"
+import { predictText } from "~src/lib/onnx"
+import { saveSample } from "~src/lib/storage"
 import type { EditableElement, Suggestion } from "./types"
 import { checkSentenceCorrection } from "./correction"
 import { debounce } from "./debouncer"
@@ -44,11 +46,52 @@ const loadSettings = async () => {
   }
 }
 
+const saveSuggestionSample = async (suggestion: Suggestion) => {
+  if (!activeEditable) {
+    return
+  }
+
+  const snapshot = getSnapshot(activeEditable)
+  const context = getWordContext(snapshot)
+
+  await saveSample({
+    contextWords: context.contextWords,
+    currentWord: context.currentWord,
+    previousWord: context.previousWord,
+    textBeforeCaret: context.textBeforeCaret,
+    language: context.language,
+    suggestion: suggestion.value,
+    suggestionKind: suggestion.kind,
+    replaceLength: suggestion.replaceLength
+  })
+}
+
+const saveSuggestionSample = async (suggestion: Suggestion) => {
+  if (!activeEditable) {
+    return
+  }
+
+  const snapshot = getSnapshot(activeEditable)
+  const context = getWordContext(snapshot)
+
+  await saveSample({
+    contextWords: context.contextWords,
+    currentWord: context.currentWord,
+    previousWord: context.previousWord,
+    textBeforeCaret: context.textBeforeCaret,
+    language: context.language,
+    suggestion: suggestion.value,
+    suggestionKind: suggestion.kind,
+    replaceLength: suggestion.replaceLength
+  })
+}
+
 const applySuggestion = (suggestion: Suggestion) => {
   if (!activeEditable) return
 
   applySuggestionToEditable(activeEditable, suggestion)
-  updateAllSuggestions()
+  void saveSuggestionSample(suggestion)
+  void updateAllSuggestions()
 }
 
 const acceptActiveSuggestion = () => {
@@ -60,7 +103,22 @@ const acceptActiveSuggestion = () => {
   return true
 }
 
-function runPredictionSuggestions() {
+const decodeModelPrediction = (output: number[]) => {
+  if (output.length === 0) {
+    return ""
+  }
+
+  const isSafeAscii = (value: number) =>
+    Number.isInteger(value) && value >= 32 && value <= 126
+
+  if (!output.every(isSafeAscii)) {
+    return ""
+  }
+
+  return String.fromCharCode(...output).trim()
+}
+
+const runPredictionSuggestions = async () => {
   if (!settings.enabled || !activeEditable) {
     hideSuggestions()
     return
@@ -83,14 +141,42 @@ function runPredictionSuggestions() {
     type: "prediction" as const
   }))
 
+  try {
+    const prediction = await predictText(context.textBeforeCaret)
+    const modelValue = decodeModelPrediction(prediction)
+
+    if (modelValue && modelValue !== context.currentWord) {
+      suggestions.unshift({
+        kind: "next",
+        label: "Model suggestion",
+        replaceLength: context.currentWord.length,
+        value: modelValue
+      })
+    }
+  } catch {
+    // Ignore ONNX model failures and continue with dictionary suggestions.
+  }
+
   if (suggestions.length === 0) {
     hideSuggestions()
     return
   }
 
-  activeSuggestions = suggestions
+  const uniqueSuggestions = new Map<string, Suggestion>()
 
-  renderSuggestions(activeEditable, suggestions, {
+  for (const suggestion of suggestions) {
+    uniqueSuggestions.set(`${suggestion.kind}:${suggestion.value}`, suggestion)
+  }
+
+  const dedupedSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 5)
+
+  if (dedupedSuggestions.length === 0) {
+    hideSuggestions()
+    return
+  }
+
+  activeSuggestions = dedupedSuggestions
+  renderSuggestions(activeEditable, dedupedSuggestions, {
     onSelect: applySuggestion
   })
 }
@@ -167,7 +253,7 @@ const handleEditableFocus = (event: Event, isActive: boolean) => {
 
   if (isActive) {
     activeEditable = editable
-    updateAllSuggestions()
+    void updateAllSuggestions()
     return
   }
 
@@ -185,7 +271,7 @@ const handleEditableInput = (event: Event) => {
   if (!editable) return
 
   activeEditable = editable
-  updateAllSuggestions()
+  void updateAllSuggestions()
 }
 
 const handleSuggestionAcceptKey = (event: KeyboardEvent) => {
