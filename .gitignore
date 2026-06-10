@@ -101,3 +101,5 @@ __pycache__/
 *test.ipynb
 /Research
 ml/notebooks/tokenization.py
+*.pth
+*.json
