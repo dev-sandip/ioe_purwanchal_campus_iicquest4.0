@@ -18,11 +18,14 @@ import {
   renderSuggestions
 } from "./popover"
 import { predictLocally } from "./prediction"
-import { predictText } from "~src/lib/onnx"
-import { saveSample } from "~src/lib/storage"
+
+
+
 import type { EditableElement, Suggestion } from "./types"
 import { checkSentenceCorrection } from "./correction"
 import { debounce } from "./debouncer"
+import { saveSample } from "~/lib/storage"
+import { predictText } from "~/lib/onnx"
 
 const ENABLE_PREDICTION = false
 const ENABLE_CORRECTION = true
