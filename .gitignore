@@ -1,6 +1,6 @@
-
+# =====================
 # Python basics
-
+# =====================
 __pycache__/
 *.py[cod]
 *.pyo
@@ -11,17 +11,15 @@ venv/
 .venv/
 ENV/
 
-
+# =====================
 # Jupyter Notebook
-
+# =====================
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-
-*ml/data_cleaned
-
+# =====================
 # Data files (IMPORTANT)
-
+# =====================
 data/
 *.csv
 *.xlsx
@@ -33,6 +31,9 @@ data/
 
 # Model artifacts
 
+# =====================
+# Model artifacts
+# =====================
 model/
 *.pkl
 *.joblib
@@ -49,6 +50,15 @@ logs/
 
 # IDEs
 
+# =====================
+# Logs
+# =====================
+logs/
+*.log
+
+# =====================
+# IDEs
+# =====================
 .vscode/
 .idea/
 *.swp
@@ -62,6 +72,15 @@ Thumbs.db
 
 # ML specific (optional but recommended)
 
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# ML specific (optional but recommended)
+# =====================
 wandb/
 mlruns/
 runs/
@@ -72,3 +91,10 @@ __pycache__/
 
 .env
 *.env
+# =====================
+# Environment files
+# =====================
+.env
+*.env
+*ml/data_cleaned
+*ml/test.ipynb
