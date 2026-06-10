@@ -3,7 +3,7 @@ import { authClient } from '#/lib/auth-client'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
-  Chrome,
+  
   Loader2,
   LockKeyhole,
   Mail,
@@ -110,12 +110,7 @@ function Login() {
 
       <section className="flex items-center justify-center px-5 py-12 sm:px-8">
         <div className="w-full max-w-md">
-          {isExtensionLogin ? (
-            <div className="mb-5 flex items-center gap-2 rounded-md border border-[#1f7159]/25 bg-white px-3 py-2 text-sm text-[#1f7159] shadow-sm">
-              <Chrome className="size-4" />
-              Login will return the required data with a JWT token.
-            </div>
-          ) : null}
+        
 
           <div className="rounded-lg border border-[#17211c]/10 bg-white p-6 shadow-xl shadow-[#17211c]/5">
             <div className="mb-6">

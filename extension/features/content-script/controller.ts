@@ -19,10 +19,16 @@ import {
 } from "./popover"
 import { predictLocally } from "./prediction"
 import type { EditableElement, Suggestion } from "./types"
+import { checkSentenceCorrection } from "./correction"
+import { debounce } from "./debouncer"
+
+const ENABLE_PREDICTION = false
+const ENABLE_CORRECTION = true
 
 let settings = DEFAULT_SETTINGS
 let activeEditable: EditableElement | null = null
 let activeSuggestions: Suggestion[] = []
+let correctionRequestId = 0
 
 const hideSuggestions = () => {
   activeSuggestions = []
@@ -39,26 +45,22 @@ const loadSettings = async () => {
 }
 
 const applySuggestion = (suggestion: Suggestion) => {
-  if (!activeEditable) {
-    return
-  }
+  if (!activeEditable) return
 
   applySuggestionToEditable(activeEditable, suggestion)
-  updateSuggestions()
+  updateAllSuggestions()
 }
 
 const acceptActiveSuggestion = () => {
   const [suggestion] = activeSuggestions
 
-  if (!suggestion) {
-    return false
-  }
+  if (!suggestion) return false
 
   applySuggestion(suggestion)
   return true
 }
 
-function updateSuggestions() {
+function runPredictionSuggestions() {
   if (!settings.enabled || !activeEditable) {
     hideSuggestions()
     return
@@ -66,6 +68,7 @@ function updateSuggestions() {
 
   const snapshot = getSnapshot(activeEditable)
   const context = getWordContext(snapshot)
+
   const suggestions = predictLocally(
     {
       contextWords: context.contextWords,
@@ -75,7 +78,10 @@ function updateSuggestions() {
       textBeforeCaret: context.textBeforeCaret
     },
     settings
-  )
+  ).map((suggestion) => ({
+    ...suggestion,
+    type: "prediction" as const
+  }))
 
   if (suggestions.length === 0) {
     hideSuggestions()
@@ -83,17 +89,75 @@ function updateSuggestions() {
   }
 
   activeSuggestions = suggestions
+
   renderSuggestions(activeEditable, suggestions, {
     onSelect: applySuggestion
   })
 }
 
+const updateCorrectionSuggestions = async () => {
+  if (!settings.enabled || !activeEditable) return
+
+  const requestId = ++correctionRequestId
+  const snapshot = getSnapshot(activeEditable)
+  const text = snapshot.text.trim()
+
+  if (!text) return
+
+  try {
+    const result = await checkSentenceCorrection(text)
+
+    if (requestId !== correctionRequestId) return
+
+    const correctionSuggestions: Suggestion[] = result.words
+      .filter((word) => !word.correct && word.suggestions.length > 0)
+      .map((word) => ({
+        value: word.suggestions[0],
+        label: `${word.word} → ${word.suggestions[0]}`,
+        type: "correction",
+        replaceStart: word.start,
+        replaceEnd: word.end
+      }))
+
+    if (correctionSuggestions.length === 0) return
+
+    activeSuggestions = correctionSuggestions
+
+    renderSuggestions(activeEditable, correctionSuggestions, {
+      onSelect: applySuggestion
+    })
+  } catch (error) {
+    console.error("Correction check failed:", error)
+  }
+}
+
+const debouncedCorrectionCheck = debounce(() => {
+  void updateCorrectionSuggestions()
+}, 600)
+
+function runCorrectionSuggestions() {
+  debouncedCorrectionCheck()
+}
+
+function updateAllSuggestions() {
+  if (!settings.enabled || !activeEditable) {
+    hideSuggestions()
+    return
+  }
+
+  if (ENABLE_PREDICTION) {
+    runPredictionSuggestions()
+  }
+
+  if (ENABLE_CORRECTION) {
+    runCorrectionSuggestions()
+  }
+}
+
 const handleEditableFocus = (event: Event, isActive: boolean) => {
   const editable = getEditableFromEvent(event)
 
-  if (!editable) {
-    return
-  }
+  if (!editable) return
 
   markEditableElement(
     editable,
@@ -103,7 +167,7 @@ const handleEditableFocus = (event: Event, isActive: boolean) => {
 
   if (isActive) {
     activeEditable = editable
-    updateSuggestions()
+    updateAllSuggestions()
     return
   }
 
@@ -118,12 +182,10 @@ const handleEditableFocus = (event: Event, isActive: boolean) => {
 const handleEditableInput = (event: Event) => {
   const editable = getEditableFromEvent(event)
 
-  if (!editable) {
-    return
-  }
+  if (!editable) return
 
   activeEditable = editable
-  updateSuggestions()
+  updateAllSuggestions()
 }
 
 const handleSuggestionAcceptKey = (event: KeyboardEvent) => {
@@ -148,9 +210,7 @@ export const startContentScript = () => {
   void loadSettings()
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "sync" || !changes[SETTINGS_STORAGE_KEY]) {
-      return
-    }
+    if (areaName !== "sync" || !changes[SETTINGS_STORAGE_KEY]) return
 
     settings = {
       ...DEFAULT_SETTINGS,
@@ -159,7 +219,7 @@ export const startContentScript = () => {
         | undefined)
     }
 
-    updateSuggestions()
+    updateAllSuggestions()
   })
 
   document.addEventListener("focusin", (event) => {
@@ -172,12 +232,13 @@ export const startContentScript = () => {
 
   document.addEventListener("input", handleEditableInput)
   document.addEventListener("keyup", handleEditableInput)
+
   window.addEventListener("keydown", handleSuggestionAcceptKey, true)
   document.addEventListener("keydown", handleSuggestionAcceptKey, true)
 
   document.addEventListener("selectionchange", () => {
     if (activeEditable && document.activeElement === activeEditable) {
-      updateSuggestions()
+      updateAllSuggestions()
     }
   })
 
