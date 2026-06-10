@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1781088889636,
-      "tag": "0000_previous_lockheed",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781090842762,
-      "tag": "0001_loose_firelord",
+      "when": 1781111636769,
+      "tag": "0000_married_gargoyle",
       "breakpoints": true
     }
   ]
