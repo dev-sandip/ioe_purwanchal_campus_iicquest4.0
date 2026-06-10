@@ -368,7 +368,7 @@ function AdminUsersPanel({
       ) : null}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+        <table className="w-full min-w-245 border-collapse text-left text-sm">
           <thead className="bg-[#f7f8f3] text-[#526159]">
             <tr>
               {[

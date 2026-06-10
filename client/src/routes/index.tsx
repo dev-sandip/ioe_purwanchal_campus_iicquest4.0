@@ -130,7 +130,7 @@ function Home() {
                   {metrics.map(([value, label]) => (
                     <div
                       key={value}
-                      className="rounded-md border border-white/10 bg-white/[0.04] p-3"
+                      className="rounded-md border border-white/10 bg-white/4 p-3"
                     >
                       <p className="text-xl font-semibold">{value}</p>
                       <p className="mt-1 text-sm text-[#b9c9c0]">{label}</p>
