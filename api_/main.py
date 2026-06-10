@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from model import load_model
-from service import GrammarService
+from api_.model import load_model
+from api_.service import GrammarService
 
 MODEL_PATH = "model/nepali_grammar_checker.pth"
 VOCAB_PATH = "model/nepali_tokenizer_vocab.json"
