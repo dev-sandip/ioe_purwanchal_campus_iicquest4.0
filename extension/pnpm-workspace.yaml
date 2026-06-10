@@ -4,4 +4,5 @@ allowBuilds:
   esbuild: true
   lmdb: true
   msgpackr-extract: true
+  protobufjs: true
   sharp: true

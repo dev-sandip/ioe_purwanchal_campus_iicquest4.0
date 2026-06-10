@@ -4,16 +4,10 @@
   "include": [".plasmo/index.d.ts", "./**/*.ts", "./**/*.tsx"],
   "compilerOptions": {
     "paths": {
-<<<<<<< Updated upstream
-      "~*": ["./*"]
-    },
-    "baseUrl": "."
-=======
   "~/*": ["./*"],
   "~*": ["./*"]
 },
     "baseUrl": ".",
     "types": ["chrome", "node"]
->>>>>>> Stashed changes
   }
 }
