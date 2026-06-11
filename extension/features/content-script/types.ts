@@ -32,4 +32,7 @@ export type Suggestion = {
   kind: "next" | "correction"
   replaceLength: number
   value: string
+  type?: "prediction" | "correction"
+  replaceStart?: number
+  replaceEnd?: number
 }
