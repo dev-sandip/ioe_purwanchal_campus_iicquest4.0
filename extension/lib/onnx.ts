@@ -1,6 +1,70 @@
-import * as ort from "onnxruntime-web"
+// ONNX Runtime runs inside a dedicated worker (see assets/ort-worker.js).
+// The worker is a raw asset loaded from the extension origin, which keeps ORT
+// and its WASM backend out of the Parcel bundle (Parcel breaks ORT's dynamic
+// backend import) and out of the host page's CSP.
 
-let session: ort.InferenceSession | null = null
+let worker: Worker | null = null
+let initPromise: Promise<void> | null = null
+let messageId = 0
+
+type PendingEntry = {
+  resolve: (value: unknown) => void
+  reject: (reason: unknown) => void
+}
+
+const pending = new Map<number, PendingEntry>()
+
+function rejectAllPending(reason: unknown): void {
+  for (const entry of pending.values()) {
+    entry.reject(reason)
+  }
+  pending.clear()
+}
+
+function getWorker(): Worker {
+  if (worker) return worker
+
+  worker = new Worker(chrome.runtime.getURL("assets/ort-worker.js"), {
+    type: "module"
+  })
+
+  worker.onmessage = (event: MessageEvent) => {
+    const { id, ok, data, error } = event.data ?? {}
+    const entry = pending.get(id)
+
+    if (!entry) return
+
+    pending.delete(id)
+
+    if (ok) {
+      entry.resolve(data)
+    } else {
+      entry.reject(new Error(error ?? "ONNX worker error"))
+    }
+  }
+
+  worker.onerror = (event) => {
+    // Reset so a later call can recreate the worker.
+    worker = null
+    initPromise = null
+    rejectAllPending(new Error(event.message || "ONNX worker crashed"))
+  }
+
+  return worker
+}
+
+function callWorker<T>(type: string, payload: unknown): Promise<T> {
+  const activeWorker = getWorker()
+  const id = ++messageId
+
+  return new Promise<T>((resolve, reject) => {
+    pending.set(id, {
+      resolve: resolve as (value: unknown) => void,
+      reject
+    })
+    activeWorker.postMessage({ id, type, payload })
+  })
+}
 
 const DB_NAME = "pragya-lekh-db"
 const DB_VERSION = 1
@@ -98,16 +162,23 @@ console.log("[ONNX] Checked IndexedDB for ONNX model, found:", !!cachedModel)
   return buffer
 }
 
-export async function loadOnnxModel(): Promise<ort.InferenceSession> {
-  if (session) return session
+async function ensureSession(): Promise<void> {
+  if (initPromise) return initPromise
 
-  const modelBuffer = await loadModelBuffer()
+  initPromise = (async () => {
+    const modelBuffer = await loadModelBuffer()
 
-  session = await ort.InferenceSession.create(modelBuffer, {
-    executionProviders: ["wasm"]
+    await callWorker("init", {
+      modelBuffer,
+      wasmPaths: chrome.runtime.getURL("assets/")
+    })
+  })().catch((error) => {
+    // Allow re-initialization after a failure.
+    initPromise = null
+    throw error
   })
 
-  return session
+  return initPromise
 }
 
 export function tokenize(text: string): number[] {
@@ -118,21 +189,11 @@ export function tokenize(text: string): number[] {
 }
 
 export async function predictText(text: string): Promise<number[]> {
-  const model = await loadOnnxModel()
+  await ensureSession()
+
   const tokens = tokenize(text)
+  const output = await callWorker<number[]>("predict", { tokens })
 
-  const inputTensor = new ort.Tensor(
-    "int64",
-    BigInt64Array.from(tokens.map(BigInt)),
-    [1, tokens.length]
-  )
-
-  const inputName = model.inputNames[0]
-  const outputName = model.outputNames[0]
-
-  const result = await model.run({
-    [inputName]: inputTensor
-  })
-console.log("[ONNX] Model run completed, raw output:", result[outputName])
-  return Array.from(result[outputName].data as Float32Array)
+  console.log("[ONNX] Model run completed, raw output:", output)
+  return output
 }
