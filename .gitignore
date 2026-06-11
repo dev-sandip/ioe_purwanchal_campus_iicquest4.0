@@ -106,3 +106,5 @@ ml/notebooks/tokenization.py
 
 *pth
 *json
+extension/.env
+extension/.env
