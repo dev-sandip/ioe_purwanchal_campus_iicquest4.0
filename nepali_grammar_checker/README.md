@@ -46,6 +46,7 @@ python -m fl.simulate --model detector --rounds 10 --clients 3
 | GET  | `/export/tokenizers` | Download tokenizers .zip |
 | GET  | `/export/rounds` | List FL round checkpoints |
 | GET  | `/export/rounds/{model}/{round}` | Download specific round weights |
+| POST | `/simulate` | Start `fl.simulate` in the background |
 | POST | `/fl/start` | Start FL training (background) |
 | GET  | `/fl/status` | FL training status |
 | POST | `/fl/reload` | Reload models from disk |

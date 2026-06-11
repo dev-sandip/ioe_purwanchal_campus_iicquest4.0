@@ -66,6 +66,12 @@ def start_fl(req: FLRequest, background_tasks: BackgroundTasks):
     )
 
 
+@router.post("/simulate", response_model=FLStatusResponse)
+def simulate(req: FLRequest, background_tasks: BackgroundTasks):
+    """Start fl.simulate in the background."""
+    return start_fl(req, background_tasks)
+
+
 @router.get("/fl/status", response_model=FLStatusResponse)
 def fl_status():
     with _fl_lock:
