@@ -1,4 +1,6 @@
-import { checkSentence, type CheckOptions } from "~/lib/grammar-api"
+import { correctWord, detectWord } from "~/lib/grammar-api"
+
+import { DEVANAGARI_PATTERN, WORDS_PATTERN } from "./constants"
 
 export type CorrectionWord = {
   word: string
@@ -10,28 +12,55 @@ export type CorrectionWord = {
 
 export type CorrectionResponse = {
   original: string
-  corrected: string
   hasError: boolean
   words: CorrectionWord[]
 }
 
+export type CorrectionOptions = {
+  signal?: AbortSignal
+}
+
+/** Minimum length of a word before it is worth checking against the API. */
+const MIN_WORD_LENGTH = 2
+
+type WordToken = {
+  word: string
+  start: number
+  end: number
+}
+
+/** Split text into Unicode-aware word tokens with their character offsets. */
+const tokenizeWords = (text: string): WordToken[] => {
+  const tokens: WordToken[] = []
+
+  for (const match of text.matchAll(WORDS_PATTERN)) {
+    const word = match[0]
+    const start = match.index ?? 0
+
+    tokens.push({ word, start, end: start + word.length })
+  }
+
+  return tokens
+}
+
+/** Whether a word is a Nepali word long enough to be checked. */
+const isCheckable = (word: string): boolean =>
+  word.length >= MIN_WORD_LENGTH && DEVANAGARI_PATTERN.test(word)
+
 /**
- * Build the list of correction suggestions for a single word from the API
- * response. The best correction (`corrected`) is placed first, followed by
- * any alternative suggestions. Entries identical to the original word are
- * dropped because there is nothing to apply for them.
+ * Build the list of correction suggestions for a single word, dropping any
+ * candidate identical to the original (there is nothing to apply for those)
+ * and removing duplicates while preserving rank order.
  */
-const buildSuggestions = (
+const dedupeSuggestions = (
   word: string,
-  corrected: string,
   suggestions: { word: string }[]
 ): string[] => {
-  const ordered = [corrected, ...suggestions.map((item) => item.word)]
   const unique = new Set<string>()
 
-  for (const candidate of ordered) {
-    if (candidate && candidate !== word) {
-      unique.add(candidate)
+  for (const candidate of suggestions) {
+    if (candidate.word && candidate.word !== word) {
+      unique.add(candidate.word)
     }
   }
 
@@ -39,44 +68,77 @@ const buildSuggestions = (
 }
 
 /**
- * Run a sentence-level grammar/spelling check against the API and map the
- * response into positioned correction words so the caller can highlight and
- * replace specific words within the original text.
+ * Word-by-word spelling check.
+ *
+ * Each Nepali word in the text is run through `/detect`; only words flagged
+ * incorrect are then sent to `/correct` for ranked alternatives. Unique words
+ * are checked once and the results fanned back out to every occurrence, so a
+ * repeated typo is only one round trip. The sentence-level `/check` endpoint
+ * is intentionally not used.
  */
-export const checkSentenceCorrection = async (
+export const checkTextCorrections = async (
   text: string,
-  options?: CheckOptions
+  options: CorrectionOptions = {}
 ): Promise<CorrectionResponse> => {
-  const result = await checkSentence(text, options)
+  const { signal } = options
+  const tokens = tokenizeWords(text)
 
-  let cursor = 0
+  const uniqueWords = Array.from(
+    new Set(tokens.filter((token) => isCheckable(token.word)).map((t) => t.word))
+  )
 
-  const words: CorrectionWord[] = result.details.map((detail) => {
-    const found = text.indexOf(detail.word, cursor)
-    const start = found === -1 ? cursor : found
-    const end = start + detail.word.length
+  // 1. Detect which unique words are misspelled. Failures are treated as
+  //    correct so a flaky request never spams the user with false positives.
+  const detections = await Promise.all(
+    uniqueWords.map(async (word) => {
+      try {
+        const result = await detectWord(word, signal)
+        return [word, result.correct] as const
+      } catch {
+        return [word, true] as const
+      }
+    })
+  )
 
-    cursor = end
+  const correctByWord = new Map<string, boolean>(detections)
 
-    const isWrong = detail.status === "wrong"
-    const suggestions = isWrong
-      ? buildSuggestions(detail.word, detail.corrected, detail.suggestions)
+  // 2. Fetch ranked corrections only for the misspelled words.
+  const wrongWords = uniqueWords.filter(
+    (word) => correctByWord.get(word) === false
+  )
+
+  const corrections = await Promise.all(
+    wrongWords.map(async (word) => {
+      try {
+        const result = await correctWord(word, signal)
+        return [word, dedupeSuggestions(word, result.suggestions)] as const
+      } catch {
+        return [word, [] as string[]] as const
+      }
+    })
+  )
+
+  const suggestionsByWord = new Map<string, string[]>(corrections)
+
+  const words: CorrectionWord[] = tokens.map((token) => {
+    const detectedWrong =
+      isCheckable(token.word) && correctByWord.get(token.word) === false
+    const suggestions = detectedWrong
+      ? (suggestionsByWord.get(token.word) ?? [])
       : []
 
     return {
-      word: detail.word,
-      // Treat the word as correct when the model has no actionable change to
-      // offer, even if it flagged the word as "wrong".
-      correct: !isWrong || suggestions.length === 0,
+      word: token.word,
+      // Only treat a word as incorrect when we have an actionable suggestion.
+      correct: !detectedWrong || suggestions.length === 0,
       suggestions,
-      start,
-      end
+      start: token.start,
+      end: token.end
     }
   })
 
   return {
-    original: result.input,
-    corrected: result.output,
+    original: text,
     hasError: words.some((word) => !word.correct),
     words
   }
