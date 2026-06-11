@@ -685,7 +685,8 @@ python new_fl/client.py --model detector --client-id 1 --total-clients 2
 ### Local Simulation (No separate clients)
 
 ```bash
-python new_fl/simulate.py --model detector --rounds 5 --clients 3
+python new_fl/simulate.py --model corrector --rounds 5 --clients 3
+python new_fl/main.py simulate --rounds 1 --clients 3 --continuous --delay 10
 ```
 
 ### Hosted API Only

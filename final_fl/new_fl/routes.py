@@ -11,16 +11,21 @@ Endpoints:
   GET  /weights/round/{n}          → download weights from round N
   GET  /metrics                    → FL round metrics
   GET  /status                     → overall FL status
+  POST /simulation/start           → start local backend Flower simulation
+  POST /simulation/stop            → request simulation stop
+  GET  /simulation/status          → current simulation state
 """
 
 import sys
 import json
 import logging
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -32,6 +37,25 @@ WEIGHTS_DIR = MODELS_DIR / "weights"
 ONNX_DIR    = MODELS_DIR / "onnx"
 LOGS_DIR    = ROOT / "logs"
 METRICS_F   = LOGS_DIR / "fl_metrics.jsonl"
+
+
+class SimulationRequest(BaseModel):
+    model: str = Field("corrector", description="corrector or both")
+    rounds: int = Field(10, ge=1, le=100)
+    clients: int = Field(3, ge=1, le=50)
+    batch_size: int = Field(32, ge=1, le=1024)
+    epochs: int = Field(2, ge=1, le=50)
+    lr: float = Field(1e-4, gt=0)
+    continuous: bool = False
+    delay: float = Field(0.0, ge=0.0)
+    csv: str = str(ROOT / "data" / "right_wrong.csv")
+    tokenizer: str = str(MODELS_DIR / "nepali_correction_tokenizer.json")
+
+
+_simulation_lock = threading.Lock()
+_simulation_stop = threading.Event()
+_simulation_thread: threading.Thread | None = None
+_simulation_status = None
 
 # ── FastAPI app ────────────────────────────────────────────────────────────────
 bridge_app = FastAPI(title="Nepali Grammar FL Bridge", version="1.0.0")
@@ -126,3 +150,83 @@ def get_status():
         "rounds_completed":     len(rounds),
         "latest_round":         latest,
     }
+
+
+@bridge_app.post("/simulation/start")
+def start_simulation(req: SimulationRequest):
+    """Start a local Flower simulation in a background thread."""
+    global _simulation_thread, _simulation_status
+
+    if req.model not in ("corrector", "both"):
+        raise HTTPException(400, "new_fl supports model='corrector' or model='both'")
+
+    with _simulation_lock:
+        if _simulation_thread is not None and _simulation_thread.is_alive():
+            raise HTTPException(409, "simulation already running")
+
+        from new_fl.simulate import SimulationStatus, run_simulation
+
+        _simulation_stop.clear()
+        _simulation_status = SimulationStatus(
+            model=req.model,
+            total_rounds=req.rounds,
+            clients=req.clients,
+            continuous=req.continuous,
+        )
+
+        def target():
+            run_simulation(
+                n_clients=req.clients,
+                n_rounds=req.rounds,
+                continuous=req.continuous,
+                delay=req.delay,
+                stop_event=_simulation_stop,
+                status=_simulation_status,
+                csv_path=req.csv,
+                tokenizer_path=req.tokenizer,
+                batch_size=req.batch_size,
+                epochs=req.epochs,
+                lr=req.lr,
+            )
+
+        _simulation_thread = threading.Thread(target=target, daemon=True)
+        _simulation_thread.start()
+        return _simulation_status.to_dict()
+
+
+@bridge_app.post("/simulation/stop")
+def stop_simulation():
+    """
+    Request simulation stop.
+
+    Flower cannot be interrupted safely in the middle of a round from this thread,
+    so the process stops at the next simulation boundary.
+    """
+    with _simulation_lock:
+        if _simulation_thread is None or not _simulation_thread.is_alive():
+            return {"running": False, "stop_requested": False}
+        _simulation_stop.set()
+        if _simulation_status is not None:
+            _simulation_status.stop_requested = True
+            return _simulation_status.to_dict()
+        return {"running": True, "stop_requested": True}
+
+
+@bridge_app.get("/simulation/status")
+def simulation_status():
+    """Get current background simulation status."""
+    with _simulation_lock:
+        if _simulation_status is None:
+            return {
+                "running": False,
+                "stop_requested": False,
+                "model": "corrector",
+                "round": 0,
+                "total_rounds": 0,
+                "clients": 0,
+                "continuous": False,
+                "cycle": 0,
+                "metrics": [],
+                "error": None,
+            }
+        return _simulation_status.to_dict()

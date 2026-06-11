@@ -43,6 +43,9 @@ The backend exposes two FL surfaces:
 - `POST /fl/round/{n}/aggregate` - performs weighted FedAvg.
 - `GET /fl/weights/latest` - downloads the latest/best `.npz` weights.
 - `GET /fl/model/corrector/onnx` - downloads the exported corrector ONNX model.
+- `POST /simulation/start` - starts `new_fl` local backend simulation from the bridge API.
+- `POST /simulation/stop` - requests stop for a running or continuous simulation.
+- `GET /simulation/status` - returns live simulation status and metrics.
 
 ## Flower CLI
 
@@ -57,6 +60,13 @@ Start clients:
 ```bash
 python main.py client --server localhost:8080 --client-id 0
 python main.py client --server localhost:8080 --client-id 1
+```
+
+Run a local simulation without separate client processes:
+
+```bash
+python new_fl/simulate.py --model corrector --rounds 5 --clients 3
+python new_fl/main.py simulate --rounds 1 --clients 3 --continuous --delay 10
 ```
 
 Defaults:
@@ -74,6 +84,7 @@ Defaults:
 - `api/another_fl/fl_routes.py` - browser/client-upload FL routes.
 - `new_fl/server.py` - Flower server for notebook corrector aggregation.
 - `new_fl/client.py` - Flower client for notebook corrector local training.
+- `new_fl/simulate.py` - local backend Flower simulation with fixed or continuous mode.
 - `fl/simulate.py` - local Flower simulation used by `/fl/start`.
 
 ## Notes

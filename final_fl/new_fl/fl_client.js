@@ -180,6 +180,43 @@ export class NepaliFL {
     return r.json()
   }
 
+  /** Start a local backend Flower simulation through the bridge API. */
+  async startSimulation(options = {}) {
+    const resp = await fetch(`${this.bridgeUrl}/simulation/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "corrector",
+        rounds: 10,
+        clients: 3,
+        batch_size: 32,
+        epochs: 2,
+        lr: 1e-4,
+        continuous: false,
+        delay: 0,
+        ...options,
+      }),
+    })
+    if (!resp.ok) throw new Error(`Failed to start simulation: ${resp.status}`)
+    return resp.json()
+  }
+
+  /** Request the backend simulation to stop at the next safe boundary. */
+  async stopSimulation() {
+    const resp = await fetch(`${this.bridgeUrl}/simulation/stop`, {
+      method: "POST",
+    })
+    if (!resp.ok) throw new Error(`Failed to stop simulation: ${resp.status}`)
+    return resp.json()
+  }
+
+  /** Get backend simulation status. */
+  async simulationStatus() {
+    const resp = await fetch(`${this.bridgeUrl}/simulation/status`)
+    if (!resp.ok) throw new Error(`Failed to get simulation status: ${resp.status}`)
+    return resp.json()
+  }
+
   // ── private ───────────────────────────────────────────────────────────────────
 
   async _fetchOnnx(modelType) {
