@@ -1,19 +1,20 @@
 """
 Load models once at startup and provide them via FastAPI Depends().
 """
+import json
 import os
 import torch
-import torch.nn as nn
 from pathlib import Path
 from functools import lru_cache
 
-from core.models import CharTransformerDetector, Seq2SeqCorrector
+from core.models import CharTransformerDetector, NepaliCorrectionModel
 from core.tokenizer import CharTokenizer
 
 DET_PTH      = os.getenv("DETECTOR_PATH",  "models/detector_best.pth")
-S2S_PTH      = os.getenv("CORRECTOR_PATH", "models/seq2seq_best.pth")
+S2S_PTH      = os.getenv("CORRECTOR_PATH", "models/nepali_correction_best.pth")
 DET_TOK_PATH = os.getenv("DET_TOK_PATH",   "data/detect_char_tokenizer.json")
-S2S_TOK_PATH = os.getenv("S2S_TOK_PATH",   "data/seq2seq_char_tokenizer.json")
+S2S_TOK_PATH = os.getenv("S2S_TOK_PATH",   "models/nepali_correction_tokenizer.json")
+S2S_CFG_PATH = os.getenv("S2S_CFG_PATH",   "models/nepali_correction_config.json")
 
 
 @lru_cache(maxsize=1)
@@ -45,24 +46,34 @@ def get_detector() -> CharTransformerDetector:
     return model
 
 
+def _load_corrector_config() -> dict:
+    defaults = {
+        "embed_dim": 64,
+        "hidden_dim": 128,
+        "num_layers": 2,
+        "dropout": 0.0,
+    }
+    cfg_path = Path(S2S_CFG_PATH)
+    if cfg_path.exists():
+        with cfg_path.open("r", encoding="utf-8") as f:
+            defaults.update(json.load(f))
+    defaults["dropout"] = 0.0
+    return defaults
+
+
 @lru_cache(maxsize=1)
-def get_corrector() -> Seq2SeqCorrector:
+def get_corrector() -> NepaliCorrectionModel:
     device    = get_device()
     tokenizer = get_correct_tokenizer()
-    model     = Seq2SeqCorrector(
+    cfg       = _load_corrector_config()
+    model     = NepaliCorrectionModel(
         vocab_size=tokenizer.vocab_size,
-        embed_dim=128, hidden_dim=128,
-        enc_layers=3, dropout=0.0
+        embed_dim=int(cfg["embed_dim"]),
+        hidden_dim=int(cfg["hidden_dim"]),
+        num_layers=int(cfg["num_layers"]),
+        dropout=0.0,
     ).to(device)
-    # Load checkpoint and handle possible positional-embedding size mismatch
     state = torch.load(S2S_PTH, map_location=device)
-    pos_key = "encoder.pos_embed.weight"
-    if isinstance(state, dict) and pos_key in state:
-        ck_sz, ck_dim = state[pos_key].shape
-        mdl_sz, mdl_dim = model.encoder.pos_embed.weight.shape
-        if ck_sz != mdl_sz:
-            # recreate positional embedding to match checkpoint size
-            model.encoder.pos_embed = nn.Embedding(ck_sz, mdl_dim).to(device)
     model.load_state_dict(state)
     model.eval()
     return model

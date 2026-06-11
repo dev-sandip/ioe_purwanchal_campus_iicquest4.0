@@ -1,0 +1,9 @@
+torch>=2.0.0
+flwr>=1.8.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.0.0
+pandas
+numpy
+scikit-learn
+python-dotenv

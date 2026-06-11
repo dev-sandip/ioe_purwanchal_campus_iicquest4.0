@@ -1,8 +1,7 @@
 import math
 import torch
-from core.models import CharTransformerDetector, Seq2SeqCorrector
+from core.models import CharTransformerDetector, NepaliCorrectionModel, Seq2SeqCorrector
 from core.tokenizer import CharTokenizer
-
 
 def detect_word(
     word: str,
@@ -11,25 +10,25 @@ def detect_word(
     device: torch.device,
     max_len: int = 30,
 ) -> dict:
-    """Returns confidence that the word is correct (prob > 0.5 = correct)."""
     model.eval()
+
     indices = tokenizer.encode(word, max_len)
     x = torch.tensor([indices], dtype=torch.long).to(device)
+
     with torch.no_grad():
-        prob = model(x).item()
+        prob_incorrect = model(x).item()
+
     return {
-        "word":       word,
-        "correct":    prob > 0.5,
-        "confidence": round(prob, 4),
+        "word": word,
+        "correct": prob_incorrect < 0.5,
+        "confidence": round(1 - prob_incorrect, 4),
     }
-
-
 def correct_word_beam(
     wrong_word: str,
-    model: Seq2SeqCorrector,
+    model: Seq2SeqCorrector | NepaliCorrectionModel,
     tokenizer: CharTokenizer,
     device: torch.device,
-    max_len: int = 30,
+    max_len: int = 100,
     beam_width: int = 5,
     top_k: int = 3,
 ) -> list[dict]:
@@ -48,12 +47,18 @@ def correct_word_beam(
 
         SOS = tokenizer.char2idx[tokenizer.SOS]
         EOS = tokenizer.char2idx[tokenizer.EOS]
-        PAD = tokenizer.char2idx[tokenizer.PAD]
 
         with torch.no_grad():
-            enc_out, h, c = model.encoder(src)
-        h = h.squeeze(0)
-        c = c.squeeze(0)
+            encoded = model.encoder(src)
+            if isinstance(encoded, tuple):
+                enc_out, h, c = encoded
+                h = h.squeeze(0)
+                c = c.squeeze(0)
+            else:
+                enc_out = encoded
+                enc_mean = enc_out.mean(dim=1)
+                h = torch.tanh(model.fc_h(enc_mean))
+                c = torch.tanh(model.fc_c(enc_mean))
 
         beams: list = [(0.0, [], h, c)]
         completed: list = []
@@ -70,9 +75,10 @@ def correct_word_beam(
                     [tokens[-1] if tokens else SOS], dtype=torch.long
                 ).to(on_device)
                 with torch.no_grad():
-                    pred, new_h, new_c, _ = model.decoder.forward_step(
+                    step_out = model.decoder.forward_step(
                         last, bh, bc, enc_out
                     )
+                    pred, new_h, new_c = step_out[:3]
                 log_p = torch.log_softmax(pred[0], dim=-1)
                 topk_lp, topk_idx = log_p.topk(beam_width)
                 for tlp, tidx in zip(topk_lp.tolist(), topk_idx.tolist()):
@@ -125,14 +131,14 @@ def correct_word_beam(
 def predict_sentence(
     text: str,
     detector: CharTransformerDetector,
-    corrector: Seq2SeqCorrector,
+    corrector: Seq2SeqCorrector | NepaliCorrectionModel,
     detect_tok: CharTokenizer,
     correct_tok: CharTokenizer,
     device: torch.device,
     threshold: float = 0.5,
     beam_width: int = 5,
     detect_max: int = 30,
-    correct_max: int = 30,
+    correct_max: int = 100,
 ) -> dict:
     """
     Full pipeline:
