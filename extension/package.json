@@ -14,14 +14,12 @@
     "package": "plasmo package",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "postinstall": "cp node_modules/onnxruntime-web/dist/*.wasm assets/ && cp node_modules/onnxruntime-web/dist/*.mjs assets/"
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "idb": "^8.0.3",
     "lucide-react": "^1.17.0",
-    "onnxruntime-web": "^1.26.0",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -50,12 +48,8 @@
     "permissions": [
       "storage",
       "tabs",
-      "identity",
-      "offscreen"
+      "identity"
     ],
-    "content_security_policy": {
-      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-    },
     "host_permissions": [
       "http://localhost:3000/*",
       "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/*",

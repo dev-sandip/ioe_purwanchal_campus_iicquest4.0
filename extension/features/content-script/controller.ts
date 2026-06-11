@@ -108,6 +108,15 @@ const updateSuggestions = async () => {
   const context = getWordContext(snapshot)
   const text = snapshot.text.trim()
 
+  if (!text || context.language !== "nepali") {
+    hideSuggestions()
+    return
+  }
+
+  const requestId = ++suggestionRequestId
+  const merged: Suggestion[] = []
+  const seenValues = new Set<string>()
+
   const pushSuggestion = (suggestion: Suggestion) => {
     if (seenValues.has(suggestion.value)) return
     seenValues.add(suggestion.value)
@@ -132,43 +141,6 @@ const updateSuggestions = async () => {
   if (willQueryApi) {
     showLoadingPopover(editable)
   }
-
-  // 1. Live prediction for the word currently being typed.
-  if (predictingCurrentWord) {
-    try {
-      const predictions = await predictCurrentWord(context, {
-        maxSuggestions: 3
-      })
-    }
-  } catch {
-    // Ignore ONNX model failures and continue with dictionary suggestions.
-  }
-
-  if (suggestions.length === 0) {
-
-  if (!text || context.language !== "nepali") {
-    hideSuggestions()
-    return
-  }
-
-  const requestId = ++suggestionRequestId
-  const merged: Suggestion[] = []
-  const seenValues = new Set<string>()
-
-  const pushSuggestion = (suggestion: Suggestion) => {
-    if (seenValues.has(suggestion.value)) return
-    seenValues.add(suggestion.value)
-    merged.push(suggestion)
-  }
-
-  const caret = snapshot.caret
-  const currentWord = context.currentWord
-  const currentWordStart = caret - currentWord.length
-  const predictingCurrentWord =
-    ENABLE_PREDICTION &&
-    settings.showNextWordSuggestions &&
-    currentWord.length > 0 &&
-    !/\s$/.test(context.textBeforeCaret)
 
   // 1. Live prediction for the word currently being typed.
   if (predictingCurrentWord) {

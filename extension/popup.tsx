@@ -40,8 +40,6 @@ const [syncMessage, setSyncMessage] = useState("")
 const [isSyncing, setIsSyncing] = useState(false)
   //sujal ko part end 
 useEffect(() => {
-    const url = chrome.runtime.getURL("assets/model/detector_best.onnx")
-    console.log("ONNX model URL:", url)
     void getSettings().then(setSettings)
     void refreshAuthSession()
       .then(setAuthSession)
