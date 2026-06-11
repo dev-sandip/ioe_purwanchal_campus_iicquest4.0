@@ -1,6 +1,7 @@
 'use client'
 
 import { getUsers } from '@/actions/users'
+import { getUserStats, getAllUsersStats } from '@/actions/stats'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 import Link from 'next/link'
@@ -36,6 +37,9 @@ export default function DashboardPage() {
   const [totalUsers, setTotalUsers] = useState(0)
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [userLoadError, setUserLoadError] = useState('')
+  const [stats, setStats] = useState({ predictionsCount: 0, correctionsCount: 0, errorsDetected: 0 })
+  const [allUsersStats, setAllUsersStats] = useState<Awaited<ReturnType<typeof getAllUsersStats>>>([])
+
 
   const user = session?.user as ConsoleUser | undefined
   const role = user?.role ?? 'user'
@@ -48,6 +52,11 @@ export default function DashboardPage() {
       router.replace('/login')
     }
   }, [isPending, router, user])
+
+  useEffect(() => {
+    if (isPending || !user?.id) return
+    void getUserStats(user.id).then(setStats)
+  }, [isPending, user])
 
   useEffect(() => {
     if (isPending || !session?.user || !isAdmin) return
@@ -76,6 +85,7 @@ export default function DashboardPage() {
     }
 
     void loadUsers()
+    void getAllUsersStats().then(setAllUsersStats)
 
     return () => {
       isCurrent = false
@@ -210,9 +220,9 @@ export default function DashboardPage() {
 
         <div className="mt-5 grid gap-5 lg:grid-cols-3">
           {[
-            ['Next-word acceptance', '68%', 'Accepted suggestions this week'],
-            ['Nepali corrections', '1.8k', 'Weekly accepted corrections'],
-            ['Training rounds', '42', 'Latest model aggregation cycle'],
+            ['Predictions', String(stats.predictionsCount), 'Words predicted by ONNX model'],
+            ['Errors detected', String(stats.errorsDetected), 'Spelling errors found'],
+            ['Corrections', String(stats.correctionsCount), 'Words corrected'],
           ].map(([label, value, body]) => (
             <article
               key={label}
@@ -232,6 +242,7 @@ export default function DashboardPage() {
             totalUsers={totalUsers}
             users={users}
             error={userLoadError}
+            usersStats={allUsersStats}
           />
         ) : (
           <UserStatusPanel user={user} serviceType={serviceType} />

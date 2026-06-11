@@ -1,4 +1,4 @@
-import { boolean, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 export const userRole = pgEnum('user_role', ['user', 'admin'])
 export const serviceType = pgEnum('service_type', ['free', 'pro', 'max'])
@@ -80,4 +80,20 @@ export const jwks = pgTable('jwks', {
   privateKey: text('private_key').notNull(),
   createdAt: timestamp('created_at').notNull(),
   expiresAt: timestamp('expires_at'),
+})
+
+export const usageStats = pgTable('usage_stats', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  predictionsCount: integer('predictions_count').default(0).notNull(),
+  correctionsCount: integer('corrections_count').default(0).notNull(),
+  errorsDetected: integer('errors_detected').default(0).notNull(),
+  updatedAt: timestamp('updated_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
 })
