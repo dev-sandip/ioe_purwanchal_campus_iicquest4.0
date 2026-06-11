@@ -1,9 +1,7 @@
 import os
 import pandas as pd
 
-# -----------------------------
 # CONFIG
-# -----------------------------
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUTPUT_DIR = os.path.join(BASE_DIR, "data_cleaned")
 
@@ -12,9 +10,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 all_texts = []
 all_rows = []
 
-# -----------------------------
 # SAFE CSV LOADER
-# -----------------------------
 def safe_read_csv(file_path):
     # try multiple strategies
     try:
@@ -37,9 +33,6 @@ def safe_read_csv(file_path):
             return None
 
 
-# -----------------------------
-# TEXT EXTRACTION
-# -----------------------------
 def extract_text(file_path):
     df = safe_read_csv(file_path)
     if df is None or df.empty:
@@ -59,9 +52,6 @@ def extract_text(file_path):
     return df[text_col].dropna().astype(str).tolist()
 
 
-# -----------------------------
-# SCAN DATASET
-# -----------------------------
 print(f"[INFO] Scanning: {BASE_DIR}")
 
 csv_count = 0
@@ -93,9 +83,6 @@ print(f"[INFO] Successfully processed: {processed_files}")
 print(f"[INFO] Total cleaned rows: {len(all_texts)}")
 
 
-# -----------------------------
-# SAVE OUTPUTS
-# -----------------------------
 csv_path = os.path.join(OUTPUT_DIR, "clean.csv")
 txt_path = os.path.join(OUTPUT_DIR, "clean.txt")
 
