@@ -11,18 +11,42 @@ const dispatchTextInputEvent = (element: HTMLElement, value: string) => {
   )
 }
 
+/**
+ * Resolve the absolute [start, end] range in the text that a suggestion should
+ * replace. When the suggestion carries explicit `replaceStart`/`replaceEnd`
+ * offsets (sentence-level corrections), those win so we can replace a word
+ * anywhere in the text. Otherwise we fall back to a caret-relative range using
+ * `replaceLength` (live predictions / completions at the caret).
+ */
+const resolveReplaceRange = (
+  suggestion: Suggestion,
+  caret: number
+): { start: number; end: number } => {
+  if (
+    typeof suggestion.replaceStart === "number" &&
+    typeof suggestion.replaceEnd === "number"
+  ) {
+    return { start: suggestion.replaceStart, end: suggestion.replaceEnd }
+  }
+
+  return {
+    start: Math.max(0, caret - suggestion.replaceLength),
+    end: caret
+  }
+}
+
 const applySuggestionToTextControl = (
   element: HTMLInputElement | HTMLTextAreaElement,
   suggestion: Suggestion
 ) => {
   const caret = element.selectionStart ?? element.value.length
-  const start = Math.max(0, caret - suggestion.replaceLength)
+  const { start, end } = resolveReplaceRange(suggestion, caret)
   const needsLeadingSpace =
     suggestion.replaceLength === 0 &&
-    caret > 0 &&
-    !/\s$/.test(element.value.slice(0, caret))
+    start > 0 &&
+    !/\s$/.test(element.value.slice(0, start))
   const value = `${needsLeadingSpace ? " " : ""}${suggestion.value}`
-  const nextValue = `${element.value.slice(0, start)}${value}${element.value.slice(caret)}`
+  const nextValue = `${element.value.slice(0, start)}${value}${element.value.slice(end)}`
   const valueSetter = Object.getOwnPropertyDescriptor(
     element instanceof HTMLTextAreaElement
       ? HTMLTextAreaElement.prototype
@@ -31,14 +55,21 @@ const applySuggestionToTextControl = (
   )?.set
 
   valueSetter?.call(element, nextValue)
-  element.setSelectionRange(start + value.length, start + value.length)
+
+  const caretAfter = start + value.length
+  element.setSelectionRange(caretAfter, caretAfter)
   dispatchTextInputEvent(element, value)
 }
 
-const setContentEditableRangeStart = (
+/**
+ * Move a range boundary to an absolute character offset within a
+ * contentEditable element, walking its text nodes to locate the position.
+ */
+const setContentEditableBoundary = (
   element: HTMLElement,
   range: Range,
-  startOffset: number
+  offset: number,
+  boundary: "start" | "end"
 ) => {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
   let consumed = 0
@@ -48,8 +79,15 @@ const setContentEditableRangeStart = (
     const textLength = node.textContent?.length ?? 0
     const nextConsumed = consumed + textLength
 
-    if (startOffset <= nextConsumed) {
-      range.setStart(node, Math.max(0, startOffset - consumed))
+    if (offset <= nextConsumed) {
+      const localOffset = Math.max(0, offset - consumed)
+
+      if (boundary === "start") {
+        range.setStart(node, localOffset)
+      } else {
+        range.setEnd(node, localOffset)
+      }
+
       return
     }
 
@@ -57,7 +95,11 @@ const setContentEditableRangeStart = (
     node = walker.nextNode()
   }
 
-  range.setStart(element, element.childNodes.length)
+  if (boundary === "start") {
+    range.setStart(element, element.childNodes.length)
+  } else {
+    range.setEnd(element, element.childNodes.length)
+  }
 }
 
 const applySuggestionToContentEditable = (
@@ -73,13 +115,11 @@ const applySuggestionToContentEditable = (
   const range = selection.getRangeAt(0)
   const snapshot = getSnapshot(element)
   const { textBeforeCaret } = getWordContext(snapshot)
+  const { start, end } = resolveReplaceRange(suggestion, snapshot.caret)
 
-  if (suggestion.replaceLength > 0) {
-    setContentEditableRangeStart(
-      element,
-      range,
-      Math.max(0, snapshot.caret - suggestion.replaceLength)
-    )
+  if (end > start) {
+    setContentEditableBoundary(element, range, start, "start")
+    setContentEditableBoundary(element, range, end, "end")
   }
 
   const needsLeadingSpace =

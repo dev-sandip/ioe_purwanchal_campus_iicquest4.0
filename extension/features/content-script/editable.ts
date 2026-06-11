@@ -60,7 +60,8 @@ export const getSnapshot = (element: EditableElement): TextSnapshot => {
 
   if (!selection || selection.rangeCount === 0) {
     const text = element.textContent ?? ""
-
+console.log("[Content Script] No selection found, defaulting caret to end of text. Text length:", text.length)
+console.log("[Content Script] Element text content:", text)
     return {
       caret: text.length,
       text

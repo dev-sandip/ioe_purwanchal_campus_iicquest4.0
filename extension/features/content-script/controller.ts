@@ -1,9 +1,13 @@
+import { trackCorrection, trackError, trackPrediction } from "~/lib/stats"
+import { saveDetection, saveSample } from "~/lib/storage"
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
   type ExtensionSettings
 } from "~lib/settings"
 
+import { checkTextCorrections } from "./correction"
+import { debounce } from "./debouncer"
 import {
   getEditableFromEvent,
   getSnapshot,
@@ -18,23 +22,16 @@ import {
   renderSuggestions,
   showLoadingPopover
 } from "./popover"
-import { predictLocally } from "./prediction"
-
-
-
+import { predictCurrentWord } from "./prediction-api"
 import type { EditableElement, Suggestion } from "./types"
-import { checkSentenceCorrection } from "./correction"
-import { debounce } from "./debouncer"
-import { saveSample } from "~/lib/storage"
-import { predictText } from "~/lib/onnx"
 
-const ENABLE_PREDICTION = false
+const ENABLE_PREDICTION = true
 const ENABLE_CORRECTION = true
 
 let settings = DEFAULT_SETTINGS
 let activeEditable: EditableElement | null = null
 let activeSuggestions: Suggestion[] = []
-let correctionRequestId = 0
+let suggestionRequestId = 0
 
 const hideSuggestions = () => {
   activeSuggestions = []
@@ -70,30 +67,17 @@ const saveSuggestionSample = async (suggestion: Suggestion) => {
   })
 }
 
-const saveSuggestionSample = async (suggestion: Suggestion) => {
-  if (!activeEditable) {
-    return
-  }
-
-  const snapshot = getSnapshot(activeEditable)
-  const context = getWordContext(snapshot)
-
-  await saveSample({
-    contextWords: context.contextWords,
-    currentWord: context.currentWord,
-    previousWord: context.previousWord,
-    textBeforeCaret: context.textBeforeCaret,
-    language: context.language,
-    suggestion: suggestion.value,
-    suggestionKind: suggestion.kind,
-    replaceLength: suggestion.replaceLength
-  })
-}
-
 const applySuggestion = (suggestion: Suggestion) => {
   if (!activeEditable) return
 
   applySuggestionToEditable(activeEditable, suggestion)
+
+  if (suggestion.type === "correction") {
+    trackCorrection()
+  } else {
+    trackPrediction()
+  }
+
   void saveSuggestionSample(suggestion)
   void updateAllSuggestions()
 }
@@ -107,56 +91,23 @@ const acceptActiveSuggestion = () => {
   return true
 }
 
-const decodeModelPrediction = (output: number[]) => {
-  if (output.length === 0) {
-    return ""
-  }
-
-  const isSafeAscii = (value: number) =>
-    Number.isInteger(value) && value >= 32 && value <= 126
-
-  if (!output.every(isSafeAscii)) {
-    return ""
-  }
-
-  return String.fromCharCode(...output).trim()
-}
-
-const runPredictionSuggestions = async () => {
+/**
+ * Single coordinated pass that produces both live word-level predictions for
+ * the word currently being typed and word-by-word corrections for the rest
+ * of the text. Results are merged (predictions first, since they target the
+ * caret), deduped, and rendered once.
+ */
+const updateSuggestions = async () => {
   if (!settings.enabled || !activeEditable) {
     hideSuggestions()
     return
   }
 
-  const snapshot = getSnapshot(activeEditable)
+  const editable = activeEditable
+  const snapshot = getSnapshot(editable)
   const context = getWordContext(snapshot)
+  const text = snapshot.text.trim()
 
-  const suggestions = predictLocally(
-    {
-      contextWords: context.contextWords,
-      currentWord: context.currentWord,
-      language: context.language,
-      previousWord: context.previousWord,
-      textBeforeCaret: context.textBeforeCaret
-    },
-    settings
-  ).map((suggestion) => ({
-    ...suggestion,
-    type: "prediction" as const
-  }))
-
-  try {
-    const prediction = await predictText(context.textBeforeCaret)
-    const modelValue = decodeModelPrediction(prediction)
-
-<<<<<<< Updated upstream
-    if (modelValue && modelValue !== context.currentWord) {
-      suggestions.unshift({
-        kind: "next",
-        label: "Model suggestion",
-        replaceLength: context.currentWord.length,
-        value: modelValue
-=======
   const pushSuggestion = (suggestion: Suggestion) => {
     if (seenValues.has(suggestion.value)) return
     seenValues.add(suggestion.value)
@@ -187,7 +138,6 @@ const runPredictionSuggestions = async () => {
     try {
       const predictions = await predictCurrentWord(context, {
         maxSuggestions: 3
->>>>>>> Stashed changes
       })
     }
   } catch {
@@ -195,72 +145,109 @@ const runPredictionSuggestions = async () => {
   }
 
   if (suggestions.length === 0) {
+
+  if (!text || context.language !== "nepali") {
     hideSuggestions()
     return
   }
 
-  const uniqueSuggestions = new Map<string, Suggestion>()
+  const requestId = ++suggestionRequestId
+  const merged: Suggestion[] = []
+  const seenValues = new Set<string>()
 
-  for (const suggestion of suggestions) {
-    uniqueSuggestions.set(`${suggestion.kind}:${suggestion.value}`, suggestion)
+  const pushSuggestion = (suggestion: Suggestion) => {
+    if (seenValues.has(suggestion.value)) return
+    seenValues.add(suggestion.value)
+    merged.push(suggestion)
   }
 
-  const dedupedSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 5)
+  const caret = snapshot.caret
+  const currentWord = context.currentWord
+  const currentWordStart = caret - currentWord.length
+  const predictingCurrentWord =
+    ENABLE_PREDICTION &&
+    settings.showNextWordSuggestions &&
+    currentWord.length > 0 &&
+    !/\s$/.test(context.textBeforeCaret)
 
-  if (dedupedSuggestions.length === 0) {
+  // 1. Live prediction for the word currently being typed.
+  if (predictingCurrentWord) {
+    try {
+      const predictions = await predictCurrentWord(context, {
+        maxSuggestions: 3
+      })
+
+      if (requestId !== suggestionRequestId) return
+
+      predictions.forEach(pushSuggestion)
+    } catch (error) {
+      console.error("[Pragya] Prediction failed:", error)
+    }
+  }
+
+  // 2. Word-by-word corrections for every flagged word.
+  if (ENABLE_CORRECTION && settings.showCorrectionSuggestions) {
+    try {
+      const result = await checkTextCorrections(text)
+
+      if (requestId !== suggestionRequestId) return
+
+      for (const word of result.words) {
+        if (!word.correct) {
+          trackError()
+          void saveDetection({
+            word: word.word,
+            suggestions: word.suggestions,
+            sentence: text
+          })
+        }
+
+        if (word.correct || word.suggestions.length === 0) {
+          continue
+        }
+
+        // The in-progress word is already handled by live prediction above.
+        const isCurrentWord =
+          predictingCurrentWord &&
+          word.start === currentWordStart &&
+          word.end === caret
+
+        if (isCurrentWord) {
+          continue
+        }
+
+        pushSuggestion({
+          value: word.suggestions[0],
+          label: `${word.word} → ${word.suggestions[0]}`,
+          kind: "correction",
+          type: "correction",
+          replaceLength: word.word.length,
+          replaceStart: word.start,
+          replaceEnd: word.end
+        })
+      }
+    } catch (error) {
+      console.error("[Pragya] Correction check failed:", error)
+    }
+  }
+
+  if (requestId !== suggestionRequestId) return
+
+  if (merged.length === 0) {
     hideSuggestions()
     return
   }
 
-  activeSuggestions = dedupedSuggestions
-  renderSuggestions(activeEditable, dedupedSuggestions, {
+  activeSuggestions = merged.slice(0, 6)
+
+  renderSuggestions(editable, activeSuggestions, {
     onSelect: applySuggestion
   })
 }
 
-const updateCorrectionSuggestions = async () => {
-  if (!settings.enabled || !activeEditable) return
-
-  const requestId = ++correctionRequestId
-  const snapshot = getSnapshot(activeEditable)
-  const text = snapshot.text.trim()
-
-  if (!text) return
-
-  try {
-    const result = await checkSentenceCorrection(text)
-
-    if (requestId !== correctionRequestId) return
-
-    const correctionSuggestions: Suggestion[] = result.words
-      .filter((word) => !word.correct && word.suggestions.length > 0)
-      .map((word) => ({
-        value: word.suggestions[0],
-        label: `${word.word} → ${word.suggestions[0]}`,
-        type: "correction",
-        replaceStart: word.start,
-        replaceEnd: word.end
-      }))
-
-    if (correctionSuggestions.length === 0) return
-
-    activeSuggestions = correctionSuggestions
-
-    renderSuggestions(activeEditable, correctionSuggestions, {
-      onSelect: applySuggestion
-    })
-  } catch (error) {
-    console.error("Correction check failed:", error)
-  }
-}
-
-const debouncedCorrectionCheck = debounce(() => {
-  void updateCorrectionSuggestions()
-}, 600)
-
-function runCorrectionSuggestions() {
-  debouncedCorrectionCheck()
-}
+const debouncedUpdateSuggestions = debounce(() => {
+  void updateSuggestions()
+}, 500)
 
 function updateAllSuggestions() {
   if (!settings.enabled || !activeEditable) {
@@ -268,13 +255,7 @@ function updateAllSuggestions() {
     return
   }
 
-  if (ENABLE_PREDICTION) {
-    runPredictionSuggestions()
-  }
-
-  if (ENABLE_CORRECTION) {
-    runCorrectionSuggestions()
-  }
+  debouncedUpdateSuggestions()
 }
 
 const handleEditableFocus = (event: Event, isActive: boolean) => {
