@@ -157,7 +157,7 @@ export class FLClient {
       `/fl/round/${this.currentRound}/upload-weights`,
       { method: "POST", body: form }
     )
-
+console.log("[FLClient] Uploaded weights for round", this.currentRound, "num_samples:", this.numSamples, "metrics:", this.localMetrics)
     await clearSamples()
     return (await res.json()) as UploadResult
   }
@@ -180,7 +180,7 @@ export class FLClient {
         await this.downloadWeights(this.currentRound)
         return result
       }
-
+console.log(`[FLClient] Waiting for aggregation... Round ${this.currentRound} progress: ${progress.submitted}/${progress.required}`)
       await new Promise((r) => setTimeout(r, 2000))
     }
 

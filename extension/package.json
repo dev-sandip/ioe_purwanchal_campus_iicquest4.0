@@ -59,11 +59,8 @@
     ],
    "web_accessible_resources": [
   {
-    "resources": ["tabs/auth-callback.html"],
-    "matches": [
-      "http://localhost:3000/*",
-      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/*"
-    ]
+    "resources": ["tabs/auth-callback.html", "assets/model/detector_best.onnx"],
+    "matches": ["<all_urls>"]
   }
 ]
   }

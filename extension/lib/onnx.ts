@@ -6,7 +6,7 @@ const DB_NAME = "pragya-lekh-db"
 const DB_VERSION = 1
 const STORE_NAME = "models"
 const MODEL_KEY = "detector_best"
-const MODEL_PATH = "model/detector_best.onnx"
+const MODEL_PATH = "assets/model/detector_best.onnx"
 
 function openModelDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -76,9 +76,9 @@ async function getModelFromIndexedDB(): Promise<ArrayBuffer | null> {
 
 async function loadModelBuffer(): Promise<ArrayBuffer> {
   const cachedModel = await getModelFromIndexedDB()
-
+console.log("[ONNX] Checked IndexedDB for ONNX model, found:", !!cachedModel)
   if (cachedModel) {
-    console.log("Loaded ONNX model from IndexedDB")
+    console.log("[ONNX] Loaded ONNX model from IndexedDB")
     return cachedModel
   }
 
@@ -133,6 +133,6 @@ export async function predictText(text: string): Promise<number[]> {
   const result = await model.run({
     [inputName]: inputTensor
   })
-
+console.log("[ONNX] Model run completed, raw output:", result[outputName])
   return Array.from(result[outputName].data as Float32Array)
 }

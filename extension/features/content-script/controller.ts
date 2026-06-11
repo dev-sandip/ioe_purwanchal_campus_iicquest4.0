@@ -27,7 +27,7 @@ import { debounce } from "./debouncer"
 import { saveSample, saveDetection } from "~/lib/storage"
 import { predictText } from "~/lib/onnx"
 
-const ENABLE_PREDICTION = false
+const ENABLE_PREDICTION = true
 const ENABLE_CORRECTION = true
 
 let settings = DEFAULT_SETTINGS
@@ -102,6 +102,7 @@ const decodeModelPrediction = (output: number[]) => {
 }
 
 const runPredictionSuggestions = async () => {
+  console.log("[ONNX] runPredictionSuggestions called, enabled:", settings.enabled)
   if (!settings.enabled || !activeEditable) {
     hideSuggestions()
     return
@@ -110,59 +111,33 @@ const runPredictionSuggestions = async () => {
   const snapshot = getSnapshot(activeEditable)
   const context = getWordContext(snapshot)
 
-  const suggestions = predictLocally(
-    {
-      contextWords: context.contextWords,
-      currentWord: context.currentWord,
-      language: context.language,
-      previousWord: context.previousWord,
-      textBeforeCaret: context.textBeforeCaret
-    },
-    settings
-  ).map((suggestion) => ({
-    ...suggestion,
-    type: "prediction" as const
-  }))
+  // Only run on Nepali text
+  console.log("[ONNX] Language detected:", context.language, "Text:", context.textBeforeCaret)
+  if (context.language !== "nepali") {
+    return
+  }
+
+  const text = context.textBeforeCaret.trim()
+  if (!text) return
 
   try {
-    const prediction = await predictText(context.textBeforeCaret)
-    const modelValue = decodeModelPrediction(prediction)
+    console.log("[ONNX] Input text:", text)
+    const prediction = await predictText(text)
+    console.log("[ONNX] Model output:", prediction)
 
-    if (modelValue && modelValue !== context.currentWord) {
-      suggestions.unshift({
-        kind: "next",
-        type: "prediction" as const,
-        label: "Model suggestion",
-        replaceLength: context.currentWord.length,
-        value: modelValue
-      })
+    // Model returns 0 (correct) or 1 (error) per word
+    const words = text.split(/\s+/)
+    for (let i = 0; i < words.length && i < prediction.length; i++) {
+      const label = Math.round(prediction[i])
+      if (label === 1) {
+        console.log("[ONNX] Error detected in word:", words[i])
+      } else {
+        console.log("[ONNX] Word correct:", words[i])
+      }
     }
-  } catch {
-    // Ignore ONNX model failures and continue with dictionary suggestions.
+  } catch (error) {
+    console.error("[ONNX] Prediction failed:", error)
   }
-
-  if (suggestions.length === 0) {
-    hideSuggestions()
-    return
-  }
-
-  const uniqueSuggestions = new Map<string, Suggestion>()
-
-  for (const suggestion of suggestions) {
-    uniqueSuggestions.set(`${suggestion.kind}:${suggestion.value}`, suggestion)
-  }
-
-  const dedupedSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 5)
-
-  if (dedupedSuggestions.length === 0) {
-    hideSuggestions()
-    return
-  }
-
-  activeSuggestions = dedupedSuggestions
-  renderSuggestions(activeEditable, dedupedSuggestions, {
-    onSelect: applySuggestion
-  })
 }
 
 const updateCorrectionSuggestions = async () => {
@@ -212,6 +187,10 @@ const updateCorrectionSuggestions = async () => {
   }
 }
 
+const debouncedPredictionCheck = debounce(() => {
+  void runPredictionSuggestions()
+}, 400)
+
 const debouncedCorrectionCheck = debounce(() => {
   void updateCorrectionSuggestions()
 }, 600)
@@ -221,13 +200,14 @@ function runCorrectionSuggestions() {
 }
 
 function updateAllSuggestions() {
+  console.log("[Pragya] updateAllSuggestions called, enabled:", settings.enabled, "editable:", !!activeEditable)
   if (!settings.enabled || !activeEditable) {
     hideSuggestions()
     return
   }
 
   if (ENABLE_PREDICTION) {
-    runPredictionSuggestions()
+    debouncedPredictionCheck()
   }
 
   if (ENABLE_CORRECTION) {
