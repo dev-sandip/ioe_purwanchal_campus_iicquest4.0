@@ -3,7 +3,7 @@
 > A privacy-first Nepali writing assistant — real-time spelling/grammar detection
 > and correction, powered by on-device inference and federated learning.
 
-Built for **IIC Quest 4.0** at **IOE Purwanchal Campus**.
+Built for **IIC Quest 4.0** at **Itahari International College**.
 
 ---
 
@@ -13,7 +13,7 @@ Pragya Lekh helps people write better Nepali. As you type in any text field on
 the web, the browser extension detects misspelled or incorrect words and offers
 ranked correction suggestions in an inline popover. Inference runs **on-device**
 using an ONNX model, and improvements to the model are learned collaboratively
-through **federated learning** — so the model gets smarter without anyone's raw
+through **federated learning**  so the model gets smarter without anyone's raw
 text ever leaving their browser.
 
 The project is made up of three cooperating parts plus a hosted grammar API:
