@@ -1,3 +1,4 @@
+import { checkSentence, type CheckOptions } from "~/lib/grammar-api"
 
 export type CorrectionWord = {
   word: string
@@ -14,55 +15,69 @@ export type CorrectionResponse = {
   words: CorrectionWord[]
 }
 
-const mockDictionary: Record<string, string[]> = {
-  "नेपालि": ["नेपाली"],
-  "रामो": ["राम्रो"],
-  "सापकोट": ["सापकोटा"],
-  "सन्दिप": ["सन्दीप"],
-  "भाषाा": ["भाषा"],
-  "होो": ["हो"]
+/**
+ * Build the list of correction suggestions for a single word from the API
+ * response. The best correction (`corrected`) is placed first, followed by
+ * any alternative suggestions. Entries identical to the original word are
+ * dropped because there is nothing to apply for them.
+ */
+const buildSuggestions = (
+  word: string,
+  corrected: string,
+  suggestions: { word: string }[]
+): string[] => {
+  const ordered = [corrected, ...suggestions.map((item) => item.word)]
+  const unique = new Set<string>()
+
+  for (const candidate of ordered) {
+    if (candidate && candidate !== word) {
+      unique.add(candidate)
+    }
+  }
+
+  return Array.from(unique)
 }
 
+/**
+ * Run a sentence-level grammar/spelling check against the API and map the
+ * response into positioned correction words so the caller can highlight and
+ * replace specific words within the original text.
+ */
 export const checkSentenceCorrection = async (
-  text: string
+  text: string,
+  options?: CheckOptions
 ): Promise<CorrectionResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 300))
+  const result = await checkSentence(text, options)
 
-  const words = text.split(/\s+/)
+  let cursor = 0
 
-  let currentIndex = 0
+  const words: CorrectionWord[] = result.details.map((detail) => {
+    const found = text.indexOf(detail.word, cursor)
+    const start = found === -1 ? cursor : found
+    const end = start + detail.word.length
 
-  const resultWords: CorrectionWord[] = []
+    cursor = end
 
-  for (const word of words) {
-    const start = text.indexOf(word, currentIndex)
-    const end = start + word.length
+    const isWrong = detail.status === "wrong"
+    const suggestions = isWrong
+      ? buildSuggestions(detail.word, detail.corrected, detail.suggestions)
+      : []
 
-    currentIndex = end
-
-    const suggestions = mockDictionary[word] || []
-
-    resultWords.push({
-      word,
-      correct: suggestions.length === 0,
+    return {
+      word: detail.word,
+      // Treat the word as correct when the model has no actionable change to
+      // offer, even if it flagged the word as "wrong".
+      correct: !isWrong || suggestions.length === 0,
       suggestions,
       start,
       end
-    })
-  }
-
-  const corrected = resultWords
-    .map((word) =>
-      word.suggestions.length > 0
-        ? word.suggestions[0]
-        : word.word
-    )
-    .join(" ")
+    }
+  })
 
   return {
-    original: text,
-    corrected,
-    hasError: resultWords.some((w) => !w.correct),
-    words: resultWords
+    original: result.input,
+    corrected: result.output,
+    hasError: words.some((word) => !word.correct),
+    words
   }
 }
