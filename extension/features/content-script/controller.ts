@@ -26,6 +26,7 @@ import { checkSentenceCorrection } from "./correction"
 import { debounce } from "./debouncer"
 import { saveSample, saveDetection } from "~/lib/storage"
 import { predictText } from "~/lib/onnx"
+import { trackPrediction, trackError } from "~/lib/stats"
 
 const ENABLE_PREDICTION = true
 const ENABLE_CORRECTION = true
@@ -131,8 +132,10 @@ const runPredictionSuggestions = async () => {
       const label = Math.round(prediction[i])
       if (label === 1) {
         console.log("[ONNX] Error detected in word:", words[i])
+        trackError()
       } else {
         console.log("[ONNX] Word correct:", words[i])
+        trackPrediction()
       }
     }
   } catch (error) {
