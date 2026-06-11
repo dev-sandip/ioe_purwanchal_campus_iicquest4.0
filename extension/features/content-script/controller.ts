@@ -15,7 +15,8 @@ import {
   getPopover,
   hidePopover,
   positionPopover,
-  renderSuggestions
+  renderSuggestions,
+  showLoadingPopover
 } from "./popover"
 import { predictLocally } from "./prediction"
 
@@ -148,12 +149,45 @@ const runPredictionSuggestions = async () => {
     const prediction = await predictText(context.textBeforeCaret)
     const modelValue = decodeModelPrediction(prediction)
 
+<<<<<<< Updated upstream
     if (modelValue && modelValue !== context.currentWord) {
       suggestions.unshift({
         kind: "next",
         label: "Model suggestion",
         replaceLength: context.currentWord.length,
         value: modelValue
+=======
+  const pushSuggestion = (suggestion: Suggestion) => {
+    if (seenValues.has(suggestion.value)) return
+    seenValues.add(suggestion.value)
+    merged.push(suggestion)
+  }
+
+  const caret = snapshot.caret
+  const currentWord = context.currentWord
+  const currentWordStart = caret - currentWord.length
+  const predictingCurrentWord =
+    ENABLE_PREDICTION &&
+    settings.showNextWordSuggestions &&
+    currentWord.length > 0 &&
+    !/\s$/.test(context.textBeforeCaret)
+
+  // Surface a "checking…" spinner while the grammar API is queried so there
+  // is always visible feedback that the extension is working.
+  const willQueryApi =
+    predictingCurrentWord ||
+    (ENABLE_CORRECTION && settings.showCorrectionSuggestions)
+
+  if (willQueryApi) {
+    showLoadingPopover(editable)
+  }
+
+  // 1. Live prediction for the word currently being typed.
+  if (predictingCurrentWord) {
+    try {
+      const predictions = await predictCurrentWord(context, {
+        maxSuggestions: 3
+>>>>>>> Stashed changes
       })
     }
   } catch {

@@ -40,6 +40,68 @@ export const hidePopover = () => {
   getPopover().style.display = "none"
 }
 
+const SPINNER_STYLE_ID = "pragya-lekh-spinner-style"
+
+/** Inject the spinner keyframes once (inline styles can't hold @keyframes). */
+const ensureSpinnerStyle = () => {
+  if (document.getElementById(SPINNER_STYLE_ID)) {
+    return
+  }
+
+  const style = document.createElement("style")
+  style.id = SPINNER_STYLE_ID
+  style.textContent =
+    "@keyframes pragya-lekh-spin{to{transform:rotate(360deg)}}"
+  document.documentElement.append(style)
+}
+
+/**
+ * Show a transient "checking…" popover with an animated spinner while the
+ * grammar API is being queried. Replaced by `renderSuggestions` once results
+ * arrive, or hidden by `hidePopover` when there is nothing to show.
+ */
+export const showLoadingPopover = (
+  element: EditableElement,
+  message = "जाँच गर्दै…"
+) => {
+  ensureSpinnerStyle()
+
+  const popover = getPopover()
+
+  popover.replaceChildren()
+
+  const row = document.createElement("div")
+  row.style.cssText = [
+    "display: flex",
+    "align-items: center",
+    "gap: 10px",
+    "padding: 8px 10px",
+    "color: #0f172a"
+  ].join(";")
+
+  const spinner = document.createElement("span")
+  spinner.setAttribute("aria-hidden", "true")
+  spinner.style.cssText = [
+    "flex: none",
+    "width: 14px",
+    "height: 14px",
+    "border: 2px solid #e2e8f0",
+    "border-top-color: #2563eb",
+    "border-radius: 50%",
+    "animation: pragya-lekh-spin 0.7s linear infinite"
+  ].join(";")
+
+  const text = document.createElement("span")
+  text.textContent = message
+  text.style.cssText = "font-size: 13px; color: #475569"
+
+  row.append(spinner, text)
+  popover.append(row)
+
+  popover.style.display = "block"
+  positionPopover(element)
+}
+
 export const positionPopover = (element: EditableElement) => {
   const popover = getPopover()
   const rect = getCaretRect(element)
