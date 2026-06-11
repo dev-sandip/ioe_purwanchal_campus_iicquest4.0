@@ -8,6 +8,13 @@
       "when": 1781111636769,
       "tag": "0000_married_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781149879016,
+      "tag": "0001_naive_network",
+      "breakpoints": true
     }
   ]
 }
