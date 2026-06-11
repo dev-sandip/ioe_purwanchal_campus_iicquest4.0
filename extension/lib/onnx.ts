@@ -117,7 +117,7 @@ export function tokenize(text: string): number[] {
     .slice(0, 128)
 }
 
-export async function predictText(text: string): Promise<unknown[]> {
+export async function predictText(text: string): Promise<number[]> {
   const model = await loadOnnxModel()
   const tokens = tokenize(text)
 
@@ -134,5 +134,5 @@ export async function predictText(text: string): Promise<unknown[]> {
     [inputName]: inputTensor
   })
 
-  return Array.from(result[outputName].data as ArrayLike<unknown>)
+  return Array.from(result[outputName].data as Float32Array)
 }
