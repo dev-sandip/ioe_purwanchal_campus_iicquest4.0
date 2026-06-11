@@ -1,2 +1,110 @@
+# =====================
+# Python basics
+# =====================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# =====================
+# Jupyter Notebook
+# =====================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# =====================
+# Data files (IMPORTANT)
+# =====================
+data/
+*.csv
+*.xlsx
+*.parquet
+
+# BUT keep structure (optional)
+!data/.gitkeep
+
+
+# Model artifacts
+
+# =====================
+# Model artifacts
+# =====================
+model/
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.onnx
+
+
+# Logs
+
+logs/
+*.log
+
+
+# IDEs
+
+# =====================
+# Logs
+# =====================
+logs/
+*.log
+
+# =====================
+# IDEs
+# =====================
+.vscode/
+.idea/
+*.swp
+
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+
+# ML specific (optional but recommended)
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# ML specific (optional but recommended)
+# =====================
+wandb/
+mlruns/
+runs/
+__pycache__/
+
+
+# Environment files
+
+.env
+*.env
+# =====================
+# Environment files
+# =====================
+.env
+*.env
+*ml/data_cleaned
+*ml/test.ipynb
+*test.ipynb
+/Research
+ml/notebooks/tokenization.py
+*.pth
+*.json
+
+*pth
+*json
 extension/.env
 extension/.env
