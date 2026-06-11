@@ -2,10 +2,11 @@
  * Client for the Nepali Grammar Checker API.
  *
  * Endpoints:
- * - POST /detect  { word }                       -> { word, correct, confidence }
- * - POST /correct { word }                       -> { word, suggestions: [{ word, score }] }
- * - POST /check   { sentence, threshold, beam_width }
- *     -> { input, output, status, details: [{ word, status, confidence, suggestions, corrected }] }
+ * - POST /detect  { word }   -> { word, correct, confidence }
+ * - POST /correct { word }   -> { word, suggestions: [{ word, score }] }
+ *
+ * Detection and correction are performed word-by-word; the sentence-level
+ * `/check` endpoint is intentionally not used.
  *
  * The base URL is configurable via PLASMO_PUBLIC_GRAMMAR_API_URL.
  */
@@ -32,27 +33,6 @@ export type DetectResponse = {
 export type CorrectResponse = {
   word: string
   suggestions: ApiSuggestion[]
-}
-
-export type CheckWordDetail = {
-  word: string
-  status: "correct" | "wrong" | string
-  confidence: number
-  suggestions: ApiSuggestion[]
-  corrected: string
-}
-
-export type CheckResponse = {
-  input: string
-  output: string
-  status: string
-  details: CheckWordDetail[]
-}
-
-export type CheckOptions = {
-  threshold?: number
-  beamWidth?: number
-  signal?: AbortSignal
 }
 
 const postJson = async <T>(
@@ -100,15 +80,3 @@ export const detectWord = (word: string, signal?: AbortSignal) =>
 /** Get ranked correction suggestions for a single word. */
 export const correctWord = (word: string, signal?: AbortSignal) =>
   postJson<CorrectResponse>("/correct", { word }, signal)
-
-/** Run a full sentence grammar/spelling check. */
-export const checkSentence = (sentence: string, options: CheckOptions = {}) =>
-  postJson<CheckResponse>(
-    "/check",
-    {
-      sentence,
-      threshold: options.threshold ?? 0.5,
-      beam_width: options.beamWidth ?? 5
-    },
-    options.signal
-  )

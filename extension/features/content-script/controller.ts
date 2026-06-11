@@ -6,7 +6,7 @@ import {
   type ExtensionSettings
 } from "~lib/settings"
 
-import { checkSentenceCorrection } from "./correction"
+import { checkTextCorrections } from "./correction"
 import { debounce } from "./debouncer"
 import {
   getEditableFromEvent,
@@ -92,7 +92,7 @@ const acceptActiveSuggestion = () => {
 
 /**
  * Single coordinated pass that produces both live word-level predictions for
- * the word currently being typed and sentence-level corrections for the rest
+ * the word currently being typed and word-by-word corrections for the rest
  * of the text. Results are merged (predictions first, since they target the
  * caret), deduped, and rendered once.
  */
@@ -146,10 +146,10 @@ const updateSuggestions = async () => {
     }
   }
 
-  // 2. Sentence-level corrections for every flagged word.
+  // 2. Word-by-word corrections for every flagged word.
   if (ENABLE_CORRECTION && settings.showCorrectionSuggestions) {
     try {
-      const result = await checkSentenceCorrection(text)
+      const result = await checkTextCorrections(text)
 
       if (requestId !== suggestionRequestId) return
 
