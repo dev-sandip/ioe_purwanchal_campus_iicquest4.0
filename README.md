@@ -26,6 +26,26 @@ The project is made up of three cooperating parts plus a hosted grammar API:
 
 ---
 
+## Documentation
+
+Full technical documentation lives in [`docs/`](./docs). Start with the
+[documentation index](./docs/README.md), then dive into a specific area:
+
+| Doc | What it covers |
+| --- | --- |
+| [01 — Overview](./docs/01-overview.md) | Product summary, goals, feature list, glossary |
+| [02 — Architecture](./docs/02-architecture.md) | How the four parts fit together, data & auth flows |
+| [03 — Browser Extension](./docs/03-extension.md) | Plasmo MV3 extension internals, content script, popup |
+| [04 — Web Client](./docs/04-web-client.md) | Next.js app: auth, dashboard, API routes, database |
+| [05 — Web-based FL Demo](./docs/05-web-based-fl.md) | In-browser ONNX spell checker + FL trigger demo |
+| [06 — Grammar API](./docs/06-grammar-api.md) | The hosted `/detect`, `/correct`, `/fl/*` endpoints |
+| [07 — Federated Learning](./docs/07-federated-learning.md) | FL client lifecycle, weight upload, aggregation |
+| [08 — Setup & Development](./docs/08-setup.md) | Installing, running, and building each module |
+| [09 — Configuration](./docs/09-configuration.md) | Environment variables and config reference |
+| [10 — Data & Storage](./docs/10-data-and-storage.md) | IndexedDB, chrome.storage, PostgreSQL schema |
+
+---
+
 ## Features
 
 - **Real-time Nepali detection & correction** in any editable field on the web.
@@ -91,6 +111,8 @@ The project is made up of three cooperating parts plus a hosted grammar API:
 ioe_purwanchal_campus_iicquest4.0/
 ├── README.md                  # This file
 ├── demo.html                  # Standalone Nepali textarea demo page
+│
+├── docs/                      # Full technical documentation (start here)
 │
 ├── extension/                 # Pragya Lekh browser extension (Plasmo, MV3)
 │   ├── popup.tsx              # Extension popup UI
