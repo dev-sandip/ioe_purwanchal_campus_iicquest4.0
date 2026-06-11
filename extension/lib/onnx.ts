@@ -5,7 +5,7 @@ let session = null
 export async function loadOnnxModel() {
     if (session) return session
 
-    const modelPath = chrome.runtime.getURL("model/grammar_model.onnx")
+    const modelPath = chrome.runtime.getURL("model/detector_best.onnx")
 
     session = await ort.InferenceSession.create(modelPath, {
         executionProviders: ["wasm"]
