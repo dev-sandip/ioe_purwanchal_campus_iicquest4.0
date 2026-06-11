@@ -24,7 +24,7 @@ import { predictLocally } from "./prediction"
 import type { EditableElement, Suggestion } from "./types"
 import { checkSentenceCorrection } from "./correction"
 import { debounce } from "./debouncer"
-import { saveSample } from "~/lib/storage"
+import { saveSample, saveDetection } from "~/lib/storage"
 import { predictText } from "~/lib/onnx"
 
 const ENABLE_PREDICTION = false
@@ -47,26 +47,6 @@ const loadSettings = async () => {
     ...DEFAULT_SETTINGS,
     ...(result[SETTINGS_STORAGE_KEY] as Partial<ExtensionSettings> | undefined)
   }
-}
-
-const saveSuggestionSample = async (suggestion: Suggestion) => {
-  if (!activeEditable) {
-    return
-  }
-
-  const snapshot = getSnapshot(activeEditable)
-  const context = getWordContext(snapshot)
-
-  await saveSample({
-    contextWords: context.contextWords,
-    currentWord: context.currentWord,
-    previousWord: context.previousWord,
-    textBeforeCaret: context.textBeforeCaret,
-    language: context.language,
-    suggestion: suggestion.value,
-    suggestionKind: suggestion.kind,
-    replaceLength: suggestion.replaceLength
-  })
 }
 
 const saveSuggestionSample = async (suggestion: Suggestion) => {
@@ -151,6 +131,7 @@ const runPredictionSuggestions = async () => {
     if (modelValue && modelValue !== context.currentWord) {
       suggestions.unshift({
         kind: "next",
+        type: "prediction" as const,
         label: "Model suggestion",
         replaceLength: context.currentWord.length,
         value: modelValue
@@ -203,10 +184,21 @@ const updateCorrectionSuggestions = async () => {
       .map((word) => ({
         value: word.suggestions[0],
         label: `${word.word} → ${word.suggestions[0]}`,
-        type: "correction",
+        kind: "correction" as const,
+        type: "correction" as const,
+        replaceLength: word.word.length,
         replaceStart: word.start,
         replaceEnd: word.end
       }))
+
+    // Save detected spelling errors to IndexedDB
+    for (const word of result.words.filter((w) => !w.correct)) {
+      void saveDetection({
+        word: word.word,
+        suggestions: word.suggestions,
+        sentence: text
+      })
+    }
 
     if (correctionSuggestions.length === 0) return
 
