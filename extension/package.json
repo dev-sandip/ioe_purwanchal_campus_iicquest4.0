@@ -60,7 +60,8 @@
       "http://localhost:3000/*",
       "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/*",
       "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/api/extension/me",
-      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/login"
+      "https://ioe-purwanchal-campus-iicquest4-0.vercel.app/login",
+      "https://pujan-dev-ioe-purwanchal.hf.space/*"
     ],
     "web_accessible_resources": [
       {
