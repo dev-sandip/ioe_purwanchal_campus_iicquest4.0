@@ -232,6 +232,6 @@ All AI-generated code was reviewed and integrated by the team.
 
 ## Acknowledgements
 
-- **IOE Purwanchal Campus** and the **IIC Quest 4.0** organizers.
+- **Itahari International College** and the **IIC Quest 4.0** organizers.
 - Open-source tools that made this possible: Plasmo, Next.js, ONNX Runtime,
   Drizzle ORM, better-auth, and Tailwind CSS.
