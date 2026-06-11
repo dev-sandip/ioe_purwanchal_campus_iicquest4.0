@@ -54,7 +54,35 @@ class CharTokenizer:
     @classmethod
     def load(cls, path: str) -> "CharTokenizer":
         tok = cls()
-        with open(path, "r", encoding="utf-8") as f:
+        p = Path(path)
+
+        tried = [str(p)]
+        if not p.exists():
+            # try relative to package root (nepali_grammar_checker/)
+            pkg_root = Path(__file__).resolve().parent.parent
+            alt = pkg_root / path
+            tried.append(str(alt))
+            if alt.exists():
+                p = alt
+            else:
+                # try cwd relative
+                cwd_alt = Path.cwd() / path
+                tried.append(str(cwd_alt))
+                if cwd_alt.exists():
+                    p = cwd_alt
+                else:
+                    # if path starts with package name, strip it
+                    parts = path.split("/", 1)
+                    if len(parts) == 2 and parts[0] == pkg_root.name:
+                        stripped = pkg_root / parts[1]
+                        tried.append(str(stripped))
+                        if stripped.exists():
+                            p = stripped
+
+        if not p.exists():
+            raise FileNotFoundError(f"Tokenizer file not found. Tried: {tried}")
+
+        with open(p, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # Handle both formats

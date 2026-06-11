@@ -37,48 +37,67 @@ def correct_word_beam(
     Beam search decoding.
     Returns top_k candidates: [{"word": ..., "score": ...}, ...]
     """
-    model.eval()
-    src = torch.tensor(
-        [tokenizer.encode(str(wrong_word), max_len)], dtype=torch.long
-    ).to(device)
+    # run beam search on given device; if a CUDA device-side assert occurs
+    # we fallback to CPU to avoid crashing the server (slower but safe).
+    def _run(on_device: torch.device):
+        model.to(on_device)
+        model.eval()
+        src = torch.tensor(
+            [tokenizer.encode(str(wrong_word), max_len)], dtype=torch.long
+        ).to(on_device)
 
-    SOS = tokenizer.char2idx[tokenizer.SOS]
-    EOS = tokenizer.char2idx[tokenizer.EOS]
-    PAD = tokenizer.char2idx[tokenizer.PAD]
+        SOS = tokenizer.char2idx[tokenizer.SOS]
+        EOS = tokenizer.char2idx[tokenizer.EOS]
+        PAD = tokenizer.char2idx[tokenizer.PAD]
 
-    with torch.no_grad():
-        enc_out, h, c = model.encoder(src)
-    h = h.squeeze(0)
-    c = c.squeeze(0)
+        with torch.no_grad():
+            enc_out, h, c = model.encoder(src)
+        h = h.squeeze(0)
+        c = c.squeeze(0)
 
-    beams: list = [(0.0, [], h, c)]
-    completed: list = []
+        beams: list = [(0.0, [], h, c)]
+        completed: list = []
 
-    for _ in range(max_len):
-        if not beams:
-            break
-        candidates = []
-        for lp, tokens, bh, bc in beams:
-            if tokens and tokens[-1] == EOS:
-                completed.append((lp, tokens))
-                continue
-            last = torch.tensor(
-                [tokens[-1] if tokens else SOS], dtype=torch.long
-            ).to(device)
-            with torch.no_grad():
-                pred, new_h, new_c, _ = model.decoder.forward_step(
-                    last, bh, bc, enc_out
-                )
-            log_p = torch.log_softmax(pred[0], dim=-1)
-            topk_lp, topk_idx = log_p.topk(beam_width)
-            for tlp, tidx in zip(topk_lp.tolist(), topk_idx.tolist()):
-                candidates.append((lp + tlp, tokens + [tidx], new_h, new_c))
-        candidates.sort(key=lambda x: x[0], reverse=True)
-        beams = candidates[:beam_width]
+        for _ in range(max_len):
+            if not beams:
+                break
+            candidates = []
+            for lp, tokens, bh, bc in beams:
+                if tokens and tokens[-1] == EOS:
+                    completed.append((lp, tokens))
+                    continue
+                last = torch.tensor(
+                    [tokens[-1] if tokens else SOS], dtype=torch.long
+                ).to(on_device)
+                with torch.no_grad():
+                    pred, new_h, new_c, _ = model.decoder.forward_step(
+                        last, bh, bc, enc_out
+                    )
+                log_p = torch.log_softmax(pred[0], dim=-1)
+                topk_lp, topk_idx = log_p.topk(beam_width)
+                for tlp, tidx in zip(topk_lp.tolist(), topk_idx.tolist()):
+                    candidates.append((lp + tlp, tokens + [tidx], new_h, new_c))
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            beams = candidates[:beam_width]
 
-    for lp, tokens, _, _ in beams:
-        completed.append((lp, tokens))
-    completed.sort(key=lambda x: x[0], reverse=True)
+        for lp, tokens, _, _ in beams:
+            completed.append((lp, tokens))
+        completed.sort(key=lambda x: x[0], reverse=True)
+
+        return completed
+
+    try:
+        completed = _run(device)
+    except Exception as e:
+        msg = str(e).lower()
+        if "device-side assert" in msg or "cuda" in msg:
+            # CUDA is in an error state — avoid further CUDA ops (moving
+            # the model will re-trigger the same error). Return a safe
+            # fallback (no suggestions) so the server stays healthy.
+            print("Warning: CUDA device-side assert during beam search; returning no suggestions.")
+            return []
+        else:
+            raise
 
     def decode_tokens(tokens):
         out = []

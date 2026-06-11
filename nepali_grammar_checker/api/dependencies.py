@@ -3,6 +3,7 @@ Load models once at startup and provide them via FastAPI Depends().
 """
 import os
 import torch
+import torch.nn as nn
 from pathlib import Path
 from functools import lru_cache
 
@@ -53,7 +54,16 @@ def get_corrector() -> Seq2SeqCorrector:
         embed_dim=128, hidden_dim=128,
         enc_layers=3, dropout=0.0
     ).to(device)
-    model.load_state_dict(torch.load(S2S_PTH, map_location=device))
+    # Load checkpoint and handle possible positional-embedding size mismatch
+    state = torch.load(S2S_PTH, map_location=device)
+    pos_key = "encoder.pos_embed.weight"
+    if isinstance(state, dict) and pos_key in state:
+        ck_sz, ck_dim = state[pos_key].shape
+        mdl_sz, mdl_dim = model.encoder.pos_embed.weight.shape
+        if ck_sz != mdl_sz:
+            # recreate positional embedding to match checkpoint size
+            model.encoder.pos_embed = nn.Embedding(ck_sz, mdl_dim).to(device)
+    model.load_state_dict(state)
     model.eval()
     return model
 
