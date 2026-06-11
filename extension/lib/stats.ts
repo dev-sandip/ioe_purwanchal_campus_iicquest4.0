@@ -36,12 +36,15 @@ async function flushStats() {
   pendingStats = { predictions: 0, corrections: 0, errorsDetected: 0 }
 
   try {
+    console.log("[Stats] Sending stats to API:", data)
     await authenticatedFetch(STATS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     })
-  } catch {
+    console.log("[Stats] Stats sent successfully")
+  } catch (error) {
+    console.error("[Stats] Failed to send stats:", error)
     // Re-add on failure
     pendingStats.predictions += data.predictions
     pendingStats.corrections += data.corrections
